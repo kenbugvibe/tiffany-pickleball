@@ -2,7 +2,7 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
-**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation and live Supabase connection are complete; the public availability experience is the next checkpoint.
+**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, and public availability experience are complete; email/password authentication is the next checkpoint.
 
 ## Planning checklist
 
