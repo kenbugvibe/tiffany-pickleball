@@ -1,0 +1,24 @@
+# Dependencies and Next.js output
+node_modules/
+.next/
+out/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Test and editor output
+coverage/
+playwright-report/
+test-results/
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
