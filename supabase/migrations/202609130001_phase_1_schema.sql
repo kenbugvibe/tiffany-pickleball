@@ -296,7 +296,7 @@ begin
 
     select
       pg_catalog.count(*)::integer,
-      pg_catalog.coalesce(pg_catalog.sum(rb.price_per_hour), 0)::integer
+      coalesce(pg_catalog.sum(rb.price_per_hour), 0)::integer
     into v_priced_hours, v_court_fee
     from pg_catalog.generate_series(0, v_duration_hours - 1) as slot(offset_hours)
     join public.rate_blocks rb
