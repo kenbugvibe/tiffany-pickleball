@@ -2,14 +2,16 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
+**Status:** Approved for phased implementation on September 13, 2026.
+
 ## Planning checklist
 
 - [x] Step 1: Inventory every screen in the reference HTML
 - [x] Step 2: Identify conflicts between the design and build specification
 - [x] Step 3: List required assumptions and confidence levels
 - [x] Step 4: List everything required before Phase 1
-- [ ] Step 5: Propose the project file and folder structure
-- [ ] Review and incorporate final corrections
+- [x] Step 5: Propose the project file and folder structure
+- [x] Review and incorporate final corrections
 - [ ] Begin Phase 1 only after the plan is approved
 
 ## Step 1 — Screen inventory
@@ -58,7 +60,7 @@ The design also introduces UI behavior not expressly defined in the specificatio
 
 ## Step 2 — Design and specification decisions
 
-Step 2 remains in progress. Decisions will be recorded here as Tiffany resolves each conflict.
+Step 2 is complete. The approved decisions below supersede conflicting wording in the original build specification and reference mockup.
 
 ### Resolved decisions
 
@@ -147,13 +149,37 @@ When Tiffany blocks a period containing existing bookings, the system must:
 - Walk-in bookings are removed from the product.
 - Do not include a walk-in button, walk-in form, `walk_in` booking kind, or walk-in payment workflow.
 
+#### Owner authorization
+
+- Use a dedicated `admin_users` database table linked to `auth.users` to identify Tiffany as the administrator.
+- Do not use an editable `app_metadata` role flag; the current Supabase user-details interface exposes Raw JSON as read-only.
+- RLS will call a secure database helper that checks whether `auth.uid()` exists in `admin_users`.
+- Phase 1 will provide a separate one-time query for adding Tiffany's Auth user UID to `admin_users`.
+- Do not commit Tiffany's email address or Auth user UID to the repository.
+
+#### Owner console structure
+
+- Use three owner destinations only: **Today**, **Calendar**, and **Money**.
+- **Today** contains the live court timeline, today's collected revenue, today's booking count, pending receipts, occupancy, and the short receipt-verification queue.
+- **Calendar** opens in week view. Selecting a day opens the hour-by-court grid for detailed scheduling.
+- Do not build the alternative horizontal court-lane layout or drag-to-move/resize behavior initially.
+- **Money** contains detailed financial reporting, the complete bookings table, filters, and CSV export.
+
+#### Customer booking-step numbering
+
+The five numbered booking steps are:
+
+1. Select court.
+2. Select time, including multiple consecutive hours when requested.
+3. Select paddle rentals.
+4. Pay through GCash.
+5. Upload payment proof.
+
+Sign-in happens only when a visitor begins a reservation, and the final confirmation screen is outside the numbered steps.
+
 ### Unresolved Step 2 decisions
 
-- Whether the owner console uses three consolidated screens or the larger navigation shown in the mockup
-- Whether the owner calendar is a day grid, horizontal day lanes, a week view, or more than one view
-- Where the full booking list and receipt-review tools belong
-- Whether revenue and occupancy remain visible on Today
-- How the five booking steps should be numbered
+None. Later optional features remain subject to discussion during their relevant build phases.
 
 ## Step 3 — Assumption register
 
@@ -213,11 +239,11 @@ Items marked **Confident** are supported by the build specification, reference d
 ### Owner operations
 
 - **Confident —** Tiffany is the only owner-side account. There are no staff roles, permission levels, or audit log.
-- **Guessing —** The final owner console will use the specification's three destinations: Today, Calendar, and Money. The design shows additional destinations.
-- **Guessing —** Calendar will include both a week view and a detailed day view. The specification asks for a week view, while the mockups only show day views.
-- **Guessing —** The full booking table and CSV export will live on Money, while the short verification queue remains on Today.
+- **Confident —** The owner console uses three destinations: Today, Calendar, and Money.
+- **Confident —** Calendar opens in week view, and selecting a day opens the detailed hour-by-court grid.
+- **Confident —** The full booking table, filters, and CSV export live on Money, while the short receipt-verification queue remains on Today.
 - **Confident —** Tiffany can block an occupied period. The system first shows affected bookings and asks for confirmation, then emails the customers, cancels the bookings, creates the block, and marks verified payments as refund pending until Tiffany manually completes each refund.
-- **Guessing —** Moving and resizing bookings by dragging will not be included unless Tiffany explicitly approves the feature.
+- **Confident —** The alternative horizontal lanes and drag-to-move/resize behavior are excluded initially and may be considered later.
 - **Confident —** Walk-in bookings and the walk-in UI are removed. Tiffany can publish open play, block courts, and manage recurring bookings.
 - **Confident —** Recurring rules materialize the next eight weeks of court bookings.
 - **Confident —** When a recurring occurrence conflicts with an existing booking, the existing booking wins, that occurrence is skipped, and Tiffany is alerted.
@@ -233,7 +259,7 @@ Items marked **Confident** are supported by the build specification, reference d
 
 - **Confident —** The product is mobile-first, uses at least 44-pixel tap targets, and shows time slots in two columns on phones.
 - **Confident —** The reference design's green, gold, and cream palette and its Zilla Slab, DM Sans, and IBM Plex Mono typography guide the interface.
-- **Guessing —** The five booking steps are court, time, paddles, GCash payment, and receipt proof; sign-in and confirmation sit outside the numbered steps.
+- **Confident —** The five booking steps are court, time, paddles, GCash payment, and receipt proof; sign-in and confirmation sit outside the numbered steps.
 - **Guessing —** The desktop customer page uses the day-rail layout rather than the alternative hour-by-court grid.
 - **Confident —** Save QR, add to calendar, call, directions, receipt resubmission, and drag/resize remain optional. Each may be considered during its relevant phase but is not included automatically.
 - **Guessing —** Customer My Bookings, dedicated Open Play, password recovery, account creation, and participant-management screens need new designs based on the existing visual system.
@@ -248,6 +274,7 @@ Items marked **Confident** are supported by the build specification, reference d
 - **Confident —** Receipt images are compressed to approximately 300 KB before upload and support direct camera capture on phones.
 - **Guessing —** Receipt files are stored privately and opened by Tiffany through short-lived signed URLs. The specification requires storage but does not define access rules.
 - **Confident —** Row-level security applies to every table, and public availability exposes no customer identity.
+- **Confident —** Owner authorization uses a dedicated `admin_users` table and a secure RLS helper instead of a JWT `app_metadata` role flag.
 - **Guessing —** Expired holds and recurring-booking generation run frequently enough through Vercel Cron to keep availability current; the exact schedules are not yet defined.
 
 ## Step 4 — What is needed before Phase 1
@@ -272,9 +299,18 @@ Phase 1 creates and tests the database. The items below are divided into true Ph
 - [x] A Supabase account owned by Tiffany or the business
 - [x] A new Supabase project for this application
 - [x] The project's region and project name selected during project creation
-- [ ] Access to the project's SQL Editor so the Phase 1 migration can be run
-- [ ] Tiffany's owner email address, so an administrator Auth user can be identified for RLS testing
-- [ ] Agreement on execution: either Tiffany runs the supplied SQL in the Supabase SQL Editor, or explicitly asks Codex to operate the browser while Tiffany handles private sign-in prompts
+- [x] Access to the project's SQL Editor confirmed
+- [x] Tiffany's owner Auth user created with a private email address; do not store the address in the repository
+- [x] Tiffany will run the supplied SQL in the Supabase SQL Editor while Codex prepares and explains it
+
+### Supabase authentication setup completed
+
+- [x] Email authentication provider enabled
+- [x] Minimum password length set to eight characters
+- [x] Hosted-project default requiring email confirmation retained
+- [x] Mobile-number login and phone OTP excluded from the application plan
+- [x] Owner Auth user created and confirmed
+- [x] Dedicated `admin_users` table approved for owner authorization; it will be created in Phase 1
 
 Do **not** send the database password, service-role secret, or account password in chat. They are not needed for writing or reviewing the schema. The Supabase project URL and publishable/anon client key will be needed when application development begins, but they do not need to be shared before the SQL-only portion of Phase 1.
 
@@ -308,3 +344,133 @@ The following known values are enough to prepare safe sample rows:
 - Final cancellation/refund policy and customer-facing terms
 
 These later-phase credentials and assets should not delay the database schema work.
+
+## Step 5 — Proposed file and folder structure
+
+This is the planned final structure. Folders and files are created only when their build phase needs them; do not generate the entire tree in advance.
+
+```text
+tiffany-pickleball/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── globals.css
+│   │   ├── loading.tsx
+│   │   ├── error.tsx
+│   │   ├── not-found.tsx
+│   │   ├── (auth)/
+│   │   │   ├── sign-in/page.tsx
+│   │   │   ├── sign-up/page.tsx
+│   │   │   ├── forgot-password/page.tsx
+│   │   │   └── update-password/page.tsx
+│   │   ├── auth/
+│   │   │   └── confirm/route.ts
+│   │   ├── (customer)/
+│   │   │   ├── book/page.tsx
+│   │   │   ├── book/confirmation/[reference]/page.tsx
+│   │   │   ├── open-play/page.tsx
+│   │   │   ├── sunday-unli/page.tsx
+│   │   │   └── my-bookings/page.tsx
+│   │   ├── owner/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── today/page.tsx
+│   │   │   ├── calendar/page.tsx
+│   │   │   └── money/page.tsx
+│   │   └── api/
+│   │       ├── cron/expire-holds/route.ts
+│   │       ├── cron/materialize-recurring/route.ts
+│   │       └── exports/bookings/route.ts
+│   ├── actions/
+│   │   ├── bookings.ts
+│   │   ├── open-play.ts
+│   │   ├── payments.ts
+│   │   └── owner.ts
+│   ├── components/
+│   │   ├── booking/
+│   │   ├── owner/
+│   │   ├── shared/
+│   │   └── ui/
+│   ├── lib/
+│   │   ├── supabase/
+│   │   │   ├── client.ts
+│   │   │   ├── server.ts
+│   │   │   └── admin.ts
+│   │   ├── data/
+│   │   ├── notifications/
+│   │   ├── dates.ts
+│   │   ├── money.ts
+│   │   └── validation.ts
+│   └── types/
+│       └── database.ts
+├── public/
+│   ├── brand/
+│   └── courts/
+├── supabase/
+│   ├── migrations/
+│   ├── seed.sql
+│   └── tests/
+├── tests/
+│   ├── unit/
+│   └── e2e/
+├── .env.example
+├── .gitignore
+├── eslint.config.mjs
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── proxy.ts
+├── tsconfig.json
+├── vercel.json
+├── README.md
+└── PLAN.md
+```
+
+### Structure notes
+
+- `src/app/` — Next.js App Router pages, layouts, loading states, errors, and HTTP endpoints.
+- `src/app/page.tsx` — Public landing and availability entry point; visitors sign in only when they start a reservation.
+- `src/app/(auth)/` — Email sign-in, signup, recovery, and password-update pages; the route group does not appear in URLs.
+- `src/app/auth/confirm/route.ts` — Server endpoint that completes Supabase email-confirmation flows.
+- `src/app/(customer)/book/` — Authenticated ordinary court-booking flow and its confirmation page.
+- `src/app/(customer)/open-play/` — Published regular open-play events and PHP 120 individual registration.
+- `src/app/(customer)/sunday-unli/` — Sunday 7:00 PM–12:00 midnight PHP 120 registration flow.
+- `src/app/(customer)/my-bookings/` — A customer's own upcoming and past reservations.
+- `src/app/owner/` — Protected owner console; the proposed routes follow Today, Calendar, and Money.
+- `src/app/api/cron/` — Authenticated Vercel Cron endpoints for expired holds and recurring-booking generation.
+- `src/app/api/exports/` — Server-generated CSV downloads for the Money screen.
+- `src/actions/` — Server Actions for UI-triggered booking, open-play, payment-review, blocking, refund, and owner mutations.
+- `src/components/booking/` — Customer booking-step components and availability controls.
+- `src/components/owner/` — Court timelines, calendars, receipt review, and financial reporting components.
+- `src/components/shared/` — Cross-feature navigation, branding, status, and empty-state components.
+- `src/components/ui/` — Small project-owned controls such as buttons, fields, dialogs, and badges; no component library.
+- `src/lib/supabase/` — Browser, server, and privileged server-only Supabase clients.
+- `src/lib/data/` — Reusable server-side database reads for availability, bookings, and owner reports.
+- `src/lib/notifications/` — Server-only Resend and Telegram integrations.
+- `src/lib/dates.ts` — `Asia/Manila` date, time-slot, and timezone helpers.
+- `src/lib/money.ts` — Whole-peso calculations and `en-PH` currency formatting.
+- `src/lib/validation.ts` — Shared validation rules for booking and owner inputs.
+- `src/types/database.ts` — Generated TypeScript types for the Supabase schema.
+- `public/brand/` — Public logo and brand artwork.
+- `public/courts/` — Optimized public court photographs.
+- `supabase/migrations/` — Versioned SQL schema changes, beginning with Phase 1.
+- `supabase/seed.sql` — Fictitious local/development sample data only.
+- `supabase/tests/` — SQL tests for overlap prevention, RLS, revenue, holds, and recurring conflicts.
+- `tests/unit/` — Focused tests for pricing, dates, validation, and other pure rules.
+- `tests/e2e/` — Browser tests for complete customer and owner workflows.
+- `.env.example` — Environment-variable names with no real keys or personal data.
+- `.gitignore` — Excludes secrets, dependencies, build output, and local generated files.
+- `proxy.ts` — Next.js 16+ route protection for booking and owner areas while leaving public availability accessible.
+- `vercel.json` — Cron schedules added only when the cron phase begins.
+- `README.md` — Setup, commands, deployment, and owner handoff instructions.
+- `PLAN.md` — Approved requirements, decisions, assumptions, and phased implementation plan.
+
+### Architecture rules
+
+- Use Server Components for database reads whenever possible.
+- Use Server Actions for mutations initiated by the application UI.
+- Use Route Handlers only for real HTTP endpoints such as Auth callbacks, cron jobs, and file downloads.
+- Keep API keys and notification calls on the server.
+- Do not add a walk-in route, component, action, or database module.
+- The owner route tree follows the approved three-screen structure: Today, Calendar, and Money.
