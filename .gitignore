@@ -2,6 +2,8 @@
 node_modules/
 .next/
 out/
+.tools/
+next-env.d.ts
 
 # Local environment files and secrets
 .env
@@ -16,6 +18,7 @@ supabase/.temp/
 coverage/
 playwright-report/
 test-results/
+*.tsbuildinfo
 .vscode/
 .idea/
 
