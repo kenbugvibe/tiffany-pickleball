@@ -2,6 +2,11 @@ import Link from "next/link";
 
 import { AvailabilityBoard } from "@/components/booking/availability-board";
 import {
+  COURT_ADDRESS,
+  COURT_REGION_SHORT,
+  CourtLocation,
+} from "@/components/shared/court-location";
+import {
   getAvailabilityForDays,
   type AvailabilityRow,
 } from "@/lib/data/availability";
@@ -176,7 +181,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-8 sm:py-16 lg:grid-cols-[1fr_330px] lg:items-end lg:py-20">
           <div className="max-w-3xl">
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-200">
-              Indoor pickleball · Panabo City
+              Indoor pickleball · {COURT_REGION_SHORT}
             </p>
             <h1 className="mt-4 font-display text-5xl font-bold leading-[0.93] tracking-[-0.02em] sm:text-7xl">
               Find your court.
@@ -229,12 +234,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         nextWeek={nextWeek}
       />
 
+      <CourtLocation />
+
       <footer className="border-t border-court-800/10 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-7 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p className="font-display font-semibold text-ink-900">
             Tiffany&apos;s Pickleball Court
           </p>
-          <p>Panabo City, Davao del Norte</p>
+          <p>{COURT_ADDRESS}</p>
         </div>
       </footer>
     </main>

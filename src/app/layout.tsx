@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | Tiffany's Pickleball Court",
   },
   description:
-    "Book an indoor pickleball court in Panabo City, Davao del Norte.",
+    "Book an indoor pickleball court in Maco, Davao de Oro.",
 };
 
 export const viewport: Viewport = {
