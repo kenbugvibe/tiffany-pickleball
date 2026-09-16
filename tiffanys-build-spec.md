@@ -1,6 +1,6 @@
 # Tiffany's Pickleball Court — Build Spec
 
-A booking and management system for a 3 court pickleball business in Panabo City, Davao del Norte.
+A booking and management system for a 3 court pickleball business in Maco, Davao de Oro.
 
 This document is the project brief. Paste it into Claude Code as your first message, then work through the phases one at a time.
 

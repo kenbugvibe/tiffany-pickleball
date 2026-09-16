@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { AuthFormState } from "@/lib/auth-form-state";
 import { ensureCustomerProfile } from "@/lib/data/customers";
+import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 import {
   normalizePhPhone,
@@ -22,24 +23,53 @@ function failure(
   return { formError, fieldErrors, notice: null };
 }
 
-/**
- * Only same-origin paths are accepted so a crafted `next` value cannot bounce
- * a signed-in customer to another site.
- */
-function safeRedirectTarget(raw: FormDataEntryValue | null) {
-  const value = typeof raw === "string" ? raw : "";
-
-  if (value.startsWith("/") && !value.startsWith("//")) {
-    return value;
+function httpOrigin(raw: string | undefined) {
+  if (!raw) {
+    return null;
   }
 
-  return "/";
+  try {
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 async function getOrigin() {
+  const configuredOrigin = httpOrigin(process.env.SITE_URL);
+
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  const vercelOrigin = httpOrigin(process.env.VERCEL_URL);
+
+  if (vercelOrigin) {
+    return vercelOrigin;
+  }
+
   const headerList = await headers();
+  const requestOrigin = httpOrigin(headerList.get("origin") ?? undefined);
+
+  if (requestOrigin) {
+    return requestOrigin;
+  }
+
   const host = headerList.get("host") ?? "localhost:3000";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const forwardedProtocol = headerList
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+  const protocol =
+    forwardedProtocol === "http" || forwardedProtocol === "https"
+      ? forwardedProtocol
+      : host.startsWith("localhost") || host.startsWith("127.0.0.1")
+        ? "http"
+        : "https";
 
   return `${protocol}://${host}`;
 }
@@ -70,7 +100,7 @@ export async function signUpAction(
 
   const supabase = await createClient();
   const origin = await getOrigin();
-  const target = safeRedirectTarget(formData.get("next"));
+  const target = safeRedirectPath(formData.get("next"));
 
   const { error } = await supabase.auth.signUp({
     email: email.trim(),
@@ -78,6 +108,9 @@ export async function signUpAction(
     options: {
       emailRedirectTo: `${origin}/auth/confirm?next=${encodeURIComponent(target)}`,
       data: {
+        // `handle_new_customer()` on auth.users only creates the profile row
+        // when this marker is present, so owner accounts are never given one.
+        account_type: "customer",
         full_name: fullName.trim(),
         phone: normalizePhPhone(phone),
       },
@@ -126,7 +159,7 @@ export async function signInAction(
 
   await ensureCustomerProfile();
 
-  redirect(safeRedirectTarget(formData.get("next")));
+  redirect(safeRedirectPath(formData.get("next")));
 }
 
 export async function signOutAction() {

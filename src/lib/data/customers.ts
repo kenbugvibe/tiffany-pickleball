@@ -6,10 +6,9 @@ import { normalizePhPhone } from "@/lib/validation";
 /**
  * Creates the caller's `customers` row when it does not exist yet.
  *
- * Signup cannot write this row directly: email confirmation is enabled, so
- * there is no session at signup time and `customers_create_own` requires an
- * authenticated `auth.uid()`. Full name and phone therefore travel in the auth
- * user's metadata and are materialized here on the first authenticated request.
+ * The signup database trigger creates this row for new customer accounts.
+ * This fallback repairs older accounts after they first authenticate, using
+ * the full name and phone carried in the auth user's metadata.
  */
 export async function ensureCustomerProfile() {
   const supabase = await createClient();

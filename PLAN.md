@@ -2,7 +2,7 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
-**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, and public availability experience are complete; email/password authentication is the next checkpoint.
+**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, and the ordinary court-booking implementation are complete. Applying the booking-payment migration, configuring Tiffany's GCash details, and completing one real phone booking are the remaining Phase 2 verification steps.
 
 ## Planning checklist
 
@@ -187,7 +187,7 @@ Items marked **Confident** are supported by the build specification, reference d
 
 ### Business and court rules
 
-- **Confident —** The business operates three courts named Court 1, Court 2, and Court 3 in Panabo City, Davao del Norte.
+- **Confident —** The business operates three courts named Court 1, Court 2, and Court 3 in Maco, Davao de Oro.
 - **Confident —** The design describes all three courts as indoor courts.
 - **Confident —** Normal operating hours are daily from 8:00 AM until 12:00 midnight in the `Asia/Manila` timezone.
 - **Confident —** Court rates are PHP 200 from 8:00 AM–12:00 NN, PHP 250 from 12:00 NN–4:00 PM, and PHP 300 from 4:00 PM–12:00 MN.

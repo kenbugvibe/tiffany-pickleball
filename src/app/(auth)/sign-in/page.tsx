@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignInForm } from "@/components/shared/sign-in-form";
+import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -17,17 +18,9 @@ function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function safePath(raw: string | undefined) {
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
-    return raw;
-  }
-
-  return "/";
-}
-
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
-  const next = safePath(firstValue(params.next));
+  const next = safeRedirectPath(firstValue(params.next));
 
   const supabase = await createClient();
   const {

@@ -8,7 +8,7 @@ Send this as your **first** message, together with the design files and the buil
 
 ```
 I am building a court booking and management system for Tiffany's Pickleball Court,
-a 3 court business in Panabo City, Davao del Norte, Philippines.
+a 3 court business in Maco, Davao de Oro, Philippines.
 
 I am NOT an experienced programmer. I can read code and follow instructions, but I
 cannot debug complex problems on my own. Plan accordingly.

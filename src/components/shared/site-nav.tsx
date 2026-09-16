@@ -22,40 +22,22 @@ export async function SiteNav() {
       </Link>
 
       {user ? (
-        <>
-          <Link
-            href="/my-bookings"
-            prefetch={false}
-            className={`hidden md:block ${linkClass}`}
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
           >
-            My bookings
-          </Link>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Sign out
-            </button>
-          </form>
-        </>
+            Sign out
+          </button>
+        </form>
       ) : (
-        <>
-          <Link
-            href="/sign-in?next=%2Fmy-bookings"
-            prefetch={false}
-            className={`hidden md:block ${linkClass}`}
-          >
-            My bookings
-          </Link>
-          <Link
-            href="/sign-in"
-            prefetch={false}
-            className="inline-flex min-h-11 items-center rounded-xl bg-gold-500 px-4 text-sm font-bold text-court-950 transition hover:bg-gold-200"
-          >
-            Sign in
-          </Link>
-        </>
+        <Link
+          href="/sign-in"
+          prefetch={false}
+          className="inline-flex min-h-11 items-center rounded-xl bg-gold-500 px-4 text-sm font-bold text-court-950 transition hover:bg-gold-200"
+        >
+          Sign in
+        </Link>
       )}
     </nav>
   );

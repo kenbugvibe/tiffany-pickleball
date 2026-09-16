@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignUpForm } from "@/components/shared/sign-up-form";
+import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -13,18 +14,11 @@ type SignUpPageProps = {
   searchParams: Promise<{ next?: string | string[] }>;
 };
 
-function safePath(value: string | string[] | undefined) {
-  const raw = Array.isArray(value) ? value[0] : value;
-
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
-    return raw;
-  }
-
-  return "/";
-}
-
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
-  const next = safePath((await searchParams).next);
+  const rawNext = (await searchParams).next;
+  const next = safeRedirectPath(
+    Array.isArray(rawNext) ? rawNext[0] : rawNext,
+  );
 
   const supabase = await createClient();
   const {
