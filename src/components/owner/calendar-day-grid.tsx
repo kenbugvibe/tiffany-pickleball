@@ -1,3 +1,4 @@
+import { removeCourtBlockAction } from "@/actions/owner";
 import { manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerTimelineBooking } from "@/lib/data/owner";
 
@@ -7,6 +8,7 @@ type CalendarDayGridProps = {
   bookings: OwnerTimelineBooking[];
   openingHour: number;
   closingHour: number;
+  nowIso: string;
 };
 
 const ROW_HEIGHT = 56;
@@ -63,12 +65,18 @@ export function CalendarDayGrid({
   bookings,
   openingHour,
   closingHour,
+  nowIso,
 }: CalendarDayGridProps) {
   const durationHours = closingHour - openingHour;
   const gridHeight = durationHours * ROW_HEIGHT;
   const hourMarks = Array.from(
     { length: durationHours + 1 },
     (_, index) => openingHour + index,
+  );
+  const now = new Date(nowIso).getTime();
+  const removableBlocks = bookings.filter(
+    (booking) =>
+      booking.kind === "blocked" && new Date(booking.endsAt).getTime() > now,
   );
 
   return (
@@ -109,6 +117,71 @@ export function CalendarDayGrid({
           </span>
         </div>
       </div>
+
+      {removableBlocks.length > 0 ? (
+        <div className="border-b border-court-800/10 bg-slate-50 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">
+            Manage blocked periods
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {removableBlocks.map((booking) => (
+              <article
+                key={booking.id}
+                className="rounded-xl border border-slate-200 bg-white p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-ink-900">
+                      {booking.blockReason ?? "Court blocked"}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-500">
+                      {booking.courtName} ·{" "}
+                      {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
+                      {manilaTimeFormatter.format(new Date(booking.endsAt))}
+                    </p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
+                      {booking.reference}
+                    </p>
+                  </div>
+
+                  <details className="group sm:text-right">
+                    <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
+                      Remove block
+                    </summary>
+                    <form
+                      action={removeCourtBlockAction}
+                      className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3 text-left"
+                    >
+                      <input type="hidden" name="blockId" value={booking.id} />
+                      <input
+                        type="hidden"
+                        name="returnDate"
+                        value={selectedDay}
+                      />
+                      <label className="flex items-start gap-2 text-xs leading-5 text-red-900">
+                        <input
+                          type="checkbox"
+                          name="confirmed"
+                          value="yes"
+                          required
+                          className="mt-0.5 size-4 accent-red-700"
+                        />
+                        Reopen this court period for new bookings.
+                      </label>
+                      <button
+                        type="submit"
+                        className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
+                      >
+                        Confirm removal
+                      </button>
+                    </form>
+                  </details>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto p-4 sm:p-5">
         <div

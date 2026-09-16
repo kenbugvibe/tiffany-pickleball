@@ -1,6 +1,9 @@
 import "server-only";
 
+import type { CourtBlockSelection } from "@/lib/court-blocks";
+import { manilaHourToIso } from "@/lib/court-blocks";
 import { addDaysToIsoDate, getTodayInManila, getWeekDays } from "@/lib/dates";
+import { isCustomerEmailConfigured } from "@/lib/notifications/court-blocked";
 import { requireOwner } from "@/lib/owner-auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -94,6 +97,40 @@ export type OwnerCalendarDaySummary = {
   hasOpenPlay: boolean;
   hasSundayUnli: boolean;
   occupancyPercent: number;
+};
+
+export type OwnerCourtBlockConflict = {
+  id: string;
+  reference: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  paymentStatus: string | null;
+  paymentAmount: number;
+  refundAmount: number;
+};
+
+export type OwnerCourtBlockSpecialConflict = {
+  id: string;
+  reference: string;
+  kind: string;
+  label: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type OwnerCourtBlockPreview = {
+  selection: CourtBlockSelection;
+  courtName: string | null;
+  startsAt: string;
+  endsAt: string;
+  error: string | null;
+  emailConfigured: boolean;
+  affectedBookings: OwnerCourtBlockConflict[];
+  specialConflicts: OwnerCourtBlockSpecialConflict[];
 };
 
 function one<T>(value: OneOrMany<T>) {
@@ -552,6 +589,7 @@ export async function getOwnerCalendarData(
 
   return {
     today: getTodayInManila(),
+    nowIso: new Date().toISOString(),
     weekStart,
     selectedDay,
     courts,
@@ -559,5 +597,132 @@ export async function getOwnerCalendarData(
     closingHour: settings.closing_hour,
     days,
     timeline,
+  };
+}
+
+export async function getCourtBlockPreview(
+  selection: CourtBlockSelection,
+): Promise<OwnerCourtBlockPreview> {
+  await requireOwner();
+
+  const supabase = await createClient();
+  const startsAt = manilaHourToIso(selection.date, selection.startHour);
+  const endsAt = manilaHourToIso(selection.date, selection.endHour);
+  const [courtResult, settingsResult, conflictsResult] = await Promise.all([
+    supabase
+      .from("courts")
+      .select("id, name")
+      .eq("id", selection.courtId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("business_settings")
+      .select("opening_hour, closing_hour")
+      .eq("id", 1)
+      .single(),
+    supabase
+      .from("bookings")
+      .select(
+        "id, reference, starts_at, ends_at, kind, status, block_reason, customers(full_name, phone, email), payments(status, amount)",
+      )
+      .eq("court_id", selection.courtId)
+      .neq("status", "cancelled")
+      .lt("starts_at", endsAt)
+      .gt("ends_at", startsAt)
+      .order("starts_at"),
+  ]);
+
+  if (courtResult.error || settingsResult.error || conflictsResult.error) {
+    throw new Error("The court block preview could not be loaded.");
+  }
+
+  const base = {
+    selection,
+    courtName: courtResult.data?.name ?? null,
+    startsAt,
+    endsAt,
+    emailConfigured: isCustomerEmailConfigured(),
+    affectedBookings: [] as OwnerCourtBlockConflict[],
+    specialConflicts: [] as OwnerCourtBlockSpecialConflict[],
+  };
+
+  if (!courtResult.data) {
+    return { ...base, error: "Choose an active court." };
+  }
+
+  if (
+    selection.startHour < settingsResult.data.opening_hour ||
+    selection.endHour > settingsResult.data.closing_hour
+  ) {
+    return {
+      ...base,
+      error: "The selected period is outside the court's operating hours.",
+    };
+  }
+
+  if (new Date(startsAt).getTime() <= Date.now()) {
+    return { ...base, error: "Choose a court block that starts in the future." };
+  }
+
+  type ConflictRow = {
+    id: string;
+    reference: string;
+    starts_at: string;
+    ends_at: string;
+    kind: string;
+    status: string;
+    block_reason: string | null;
+    customers: OneOrMany<CustomerRelation>;
+    payments: OneOrMany<{ status: string; amount: number }>;
+  };
+
+  const conflicts = (conflictsResult.data ?? []) as unknown as ConflictRow[];
+  const affectedBookings = conflicts
+    .filter((booking) => ["regular", "recurring"].includes(booking.kind))
+    .map((booking) => {
+      const customer = one(booking.customers);
+      const payment = one(booking.payments);
+
+      return {
+        id: booking.id,
+        reference: booking.reference,
+        customerName: customer?.full_name ?? "Customer",
+        customerEmail: customer?.email ?? "Not available",
+        customerPhone: customer?.phone ?? "Not available",
+        startsAt: booking.starts_at,
+        endsAt: booking.ends_at,
+        status: booking.status,
+        paymentStatus: payment?.status ?? null,
+        paymentAmount: Number(payment?.amount ?? 0),
+        refundAmount:
+          payment && ["verified", "refund_pending"].includes(payment.status)
+            ? Number(payment.amount)
+            : 0,
+      } satisfies OwnerCourtBlockConflict;
+    });
+  const specialConflicts = conflicts
+    .filter((booking) => !["regular", "recurring"].includes(booking.kind))
+    .map(
+      (booking) =>
+        ({
+          id: booking.id,
+          reference: booking.reference,
+          kind: booking.kind,
+          label:
+            booking.kind === "blocked"
+              ? booking.block_reason || "Existing court block"
+              : booking.kind === "open_play"
+                ? "Open play session"
+                : "Sunday unli session",
+          startsAt: booking.starts_at,
+          endsAt: booking.ends_at,
+        }) satisfies OwnerCourtBlockSpecialConflict,
+    );
+
+  return {
+    ...base,
+    error: null,
+    affectedBookings,
+    specialConflicts,
   };
 }

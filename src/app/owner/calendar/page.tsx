@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 
 import { CalendarDayGrid } from "@/components/owner/calendar-day-grid";
 import { CalendarWeek } from "@/components/owner/calendar-week";
+import { CourtBlockPanel } from "@/components/owner/court-block-panel";
+import { parseCourtBlockSelection } from "@/lib/court-blocks";
 import {
   addDaysToIsoDate,
   getTodayInManila,
   getWeekStart,
   isIsoDate,
 } from "@/lib/dates";
-import { getOwnerCalendarData } from "@/lib/data/owner";
+import {
+  getCourtBlockPreview,
+  getOwnerCalendarData,
+} from "@/lib/data/owner";
 
 export const metadata: Metadata = {
   title: "Calendar",
@@ -18,6 +23,16 @@ type OwnerCalendarPageProps = {
   searchParams: Promise<{
     week?: string | string[];
     day?: string | string[];
+    blockCourt?: string | string[];
+    blockDate?: string | string[];
+    blockStart?: string | string[];
+    blockEnd?: string | string[];
+    blockReason?: string | string[];
+    blocked?: string | string[];
+    unblocked?: string | string[];
+    cancelled?: string | string[];
+    emailFailed?: string | string[];
+    error?: string | string[];
   }>;
 };
 
@@ -31,18 +46,74 @@ export default async function OwnerCalendarPage({
   const params = await searchParams;
   const today = getTodayInManila();
   const requestedWeek = first(params.week);
-  const weekAnchor = isIsoDate(requestedWeek) ? requestedWeek : today;
+  const requestedBlockDate = first(params.blockDate);
+  const blockFocusDate = isIsoDate(requestedBlockDate)
+    ? requestedBlockDate
+    : null;
+  const weekAnchor = blockFocusDate ?? (isIsoDate(requestedWeek) ? requestedWeek : today);
   const weekStart = getWeekStart(weekAnchor);
   const weekEnd = addDaysToIsoDate(weekStart, 6);
   const requestedDay = first(params.day);
   const defaultDay = today >= weekStart && today <= weekEnd ? today : weekStart;
-  const selectedDay =
-    isIsoDate(requestedDay) &&
+  const selectedDay = blockFocusDate ??
+    (isIsoDate(requestedDay) &&
     requestedDay >= weekStart &&
     requestedDay <= weekEnd
       ? requestedDay
-      : defaultDay;
-  const data = await getOwnerCalendarData(weekStart, selectedDay);
+      : defaultDay);
+  const rawBlockInput = {
+    courtId: first(params.blockCourt),
+    date: first(params.blockDate),
+    startHour: first(params.blockStart),
+    endHour: first(params.blockEnd),
+    reason: first(params.blockReason),
+  };
+  const hasBlockInput = Object.values(rawBlockInput).every(
+    (value) => value !== undefined,
+  );
+  const parsedBlock = hasBlockInput
+    ? parseCourtBlockSelection(rawBlockInput)
+    : null;
+  const [data, blockPreview] = await Promise.all([
+    getOwnerCalendarData(weekStart, selectedDay),
+    parsedBlock?.ok
+      ? getCourtBlockPreview(parsedBlock.value)
+      : Promise.resolve(null),
+  ]);
+  const blocked = first(params.blocked);
+  const unblocked = first(params.unblocked);
+  const cancelled = Number(first(params.cancelled) ?? 0);
+  const emailFailed = Number(first(params.emailFailed) ?? 0);
+  const error = first(params.error);
+  const errorMessages: Record<string, string> = {
+    "invalid-block": "The court block details were invalid. Review the fields and try again.",
+    "confirmation-required": "Check the confirmation box before creating the court block.",
+    "schedule-changed": "The schedule changed after your preview. Review the affected bookings again before confirming.",
+    "special-conflict": "That period now overlaps a block or special session. Choose another time or manage that schedule first.",
+    "email-not-configured": "Customer email must be configured before reservations can be cancelled.",
+    "block-failed": "The court block could not be created. Confirm the Phase 4 migration is applied, then preview it again.",
+    "invalid-remove-block": "The selected court block was invalid.",
+    "remove-confirmation-required": "Confirm that you want to reopen the blocked period.",
+    "remove-block-failed": "The court block could not be removed. Confirm the remove-block migration is applied, then try again.",
+  };
+  const selectedError = error ? errorMessages[error] : null;
+  const inputError = parsedBlock && !parsedBlock.ok ? parsedBlock.error : null;
+  const defaultCourtId = String(data.courts[0]?.id ?? "");
+  const draft = parsedBlock?.ok
+    ? {
+        courtId: String(parsedBlock.value.courtId),
+        date: parsedBlock.value.date,
+        startHour: String(parsedBlock.value.startHour),
+        endHour: String(parsedBlock.value.endHour),
+        reason: parsedBlock.value.reason,
+      }
+    : {
+        courtId: defaultCourtId,
+        date: selectedDay >= data.today ? selectedDay : data.today,
+        startHour: String(data.openingHour),
+        endHour: String(data.openingHour + 1),
+        reason: "",
+      };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
@@ -75,6 +146,38 @@ export default async function OwnerCalendarPage({
         />
       </div>
 
+      {blocked ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Court block {blocked} created.
+          {cancelled > 0
+            ? ` ${cancelled} customer ${cancelled === 1 ? "booking was" : "bookings were"} cancelled.`
+            : " No customer bookings were affected."}
+        </div>
+      ) : null}
+
+      {unblocked ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Court block {unblocked} removed. The period is available for new
+          bookings again.
+        </div>
+      ) : null}
+
+      {emailFailed > 0 ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-bold">
+            {emailFailed} cancellation {emailFailed === 1 ? "email" : "emails"} could not be delivered.
+          </span>{" "}
+          The court block and cancellations were saved. The failed notice is
+          recorded for follow-up.
+        </div>
+      ) : null}
+
+      {selectedError || inputError ? (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          {selectedError ?? inputError}
+        </div>
+      ) : null}
+
       <div className="mt-7">
         <CalendarDayGrid
           selectedDay={selectedDay}
@@ -82,13 +185,22 @@ export default async function OwnerCalendarPage({
           bookings={data.timeline}
           openingHour={data.openingHour}
           closingHour={data.closingHour}
+          nowIso={data.nowIso}
         />
       </div>
 
-      <aside className="mt-7 rounded-2xl border border-dashed border-court-800/20 bg-court-800/5 px-5 py-4 text-sm leading-6 text-ink-500">
-        This calendar is currently read-only. Court blocking, open-play publishing,
-        and recurring-booking controls are the next Calendar steps.
-      </aside>
+      <div className="mt-7">
+        <CourtBlockPanel
+          courts={data.courts}
+          today={data.today}
+          weekStart={weekStart}
+          selectedDay={selectedDay}
+          openingHour={data.openingHour}
+          closingHour={data.closingHour}
+          draft={draft}
+          preview={blockPreview}
+        />
+      </div>
     </div>
   );
 }
