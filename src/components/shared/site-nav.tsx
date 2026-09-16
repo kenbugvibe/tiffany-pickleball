@@ -11,6 +11,9 @@ export async function SiteNav() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const { data: isAdmin } = user
+    ? await supabase.rpc("is_admin")
+    : { data: false };
 
   return (
     <nav
@@ -22,14 +25,24 @@ export async function SiteNav() {
       </Link>
 
       {user ? (
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            Sign out
-          </button>
-        </form>
+        <>
+          {isAdmin ? (
+            <Link
+              href="/owner/today"
+              className="inline-flex min-h-11 items-center rounded-xl bg-gold-500 px-4 text-sm font-bold text-court-950 transition hover:bg-gold-200"
+            >
+              Owner console
+            </Link>
+          ) : null}
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Sign out
+            </button>
+          </form>
+        </>
       ) : (
         <Link
           href="/sign-in"
