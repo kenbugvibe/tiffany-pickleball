@@ -41,3 +41,23 @@ export function isIsoDate(value: string | undefined): value is string {
     parsed.toISOString().slice(0, 10) === value
   );
 }
+
+export function addDaysToIsoDate(value: string, amount: number) {
+  const parsed = new Date(`${value}T12:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + amount);
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function getWeekStart(value: string) {
+  const parsed = new Date(`${value}T12:00:00Z`);
+  const daysSinceMonday = (parsed.getUTCDay() + 6) % 7;
+
+  return addDaysToIsoDate(value, -daysSinceMonday);
+}
+
+export function getWeekDays(weekStart: string) {
+  return Array.from({ length: 7 }, (_, index) =>
+    addDaysToIsoDate(weekStart, index),
+  );
+}

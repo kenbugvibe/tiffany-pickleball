@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getTodayInManila } from "@/lib/dates";
+import { addDaysToIsoDate, getTodayInManila, getWeekDays } from "@/lib/dates";
 import { requireOwner } from "@/lib/owner-auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -84,6 +84,16 @@ export type OwnerUpcomingBooking = {
   customerName: string;
   status: string;
   amount: number;
+};
+
+export type OwnerCalendarDaySummary = {
+  date: string;
+  entryCount: number;
+  pendingCount: number;
+  blockedCount: number;
+  hasOpenPlay: boolean;
+  hasSundayUnli: boolean;
+  occupancyPercent: number;
 };
 
 function one<T>(value: OneOrMany<T>) {
@@ -400,5 +410,154 @@ export async function getOwnerTodayData() {
     },
     pendingPayments,
     upcoming,
+  };
+}
+
+export async function getOwnerCalendarData(
+  weekStart: string,
+  selectedDay: string,
+) {
+  await requireOwner();
+
+  const supabase = await createClient();
+  const weekBounds = manilaDayBounds(weekStart);
+  const weekEnd = manilaDayBounds(addDaysToIsoDate(weekStart, 7));
+
+  const [courtsResult, settingsResult, bookingsResult] = await Promise.all([
+    supabase
+      .from("courts")
+      .select("id, name, is_active")
+      .eq("is_active", true)
+      .order("id"),
+    supabase
+      .from("business_settings")
+      .select("opening_hour, closing_hour")
+      .eq("id", 1)
+      .single(),
+    supabase
+      .from("bookings")
+      .select(
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name)",
+      )
+      .lt("starts_at", weekEnd.startIso)
+      .gt("ends_at", weekBounds.startIso)
+      .not("status", "in", "(cancelled,no_show)")
+      .order("starts_at"),
+  ]);
+
+  if (courtsResult.error || settingsResult.error || bookingsResult.error) {
+    throw new Error("The owner calendar data could not be loaded.");
+  }
+
+  const courts = (courtsResult.data ?? []) as Array<{
+    id: number;
+    name: string;
+    is_active: boolean;
+  }>;
+  const settings = settingsResult.data as {
+    opening_hour: number;
+    closing_hour: number;
+  };
+  const bookingRows = (bookingsResult.data ?? []) as unknown as BookingRow[];
+  const minutesAvailablePerDay =
+    courts.length * (settings.closing_hour - settings.opening_hour) * 60;
+
+  const days = getWeekDays(weekStart).map((date) => {
+    const bounds = manilaDayBounds(date);
+    const openingTime =
+      bounds.start.getTime() + settings.opening_hour * 60 * 60 * 1000;
+    const closingTime =
+      bounds.start.getTime() + settings.closing_hour * 60 * 60 * 1000;
+    const entries = bookingRows.filter((booking) => {
+      const startsAt = new Date(booking.starts_at).getTime();
+      const endsAt = new Date(booking.ends_at).getTime();
+
+      return startsAt < bounds.end.getTime() && endsAt > bounds.start.getTime();
+    });
+    const occupiedMinutes = entries.reduce((total, booking) => {
+      const startsAt = Math.max(
+        new Date(booking.starts_at).getTime(),
+        openingTime,
+      );
+      const endsAt = Math.min(new Date(booking.ends_at).getTime(), closingTime);
+
+      return total + Math.max(0, Math.round((endsAt - startsAt) / 60000));
+    }, 0);
+
+    return {
+      date,
+      entryCount: entries.length,
+      pendingCount: entries.filter(
+        (booking) =>
+          booking.status === "pending" &&
+          ["regular", "recurring"].includes(booking.kind),
+      ).length,
+      blockedCount: entries.filter((booking) => booking.kind === "blocked")
+        .length,
+      hasOpenPlay: entries.some((booking) => booking.kind === "open_play"),
+      hasSundayUnli: entries.some(
+        (booking) => booking.kind === "sunday_unli",
+      ),
+      occupancyPercent:
+        minutesAvailablePerDay > 0
+          ? Math.round((occupiedMinutes / minutesAvailablePerDay) * 100)
+          : 0,
+    } satisfies OwnerCalendarDaySummary;
+  });
+
+  const selectedBounds = manilaDayBounds(selectedDay);
+  const timeline = bookingRows
+    .filter((booking) => {
+      const startsAt = new Date(booking.starts_at).getTime();
+      const endsAt = new Date(booking.ends_at).getTime();
+
+      return (
+        startsAt < selectedBounds.end.getTime() &&
+        endsAt > selectedBounds.start.getTime()
+      );
+    })
+    .map((booking) => {
+      const customer = one(booking.customers);
+      const court = one(booking.courts);
+
+      return {
+        id: booking.id,
+        reference: booking.reference,
+        courtId: booking.court_id,
+        courtName: court?.name ?? "Court",
+        startsAt: booking.starts_at,
+        endsAt: booking.ends_at,
+        startMinute: Math.max(
+          0,
+          Math.round(
+            (new Date(booking.starts_at).getTime() -
+              selectedBounds.start.getTime()) /
+              60000,
+          ),
+        ),
+        endMinute: Math.min(
+          24 * 60,
+          Math.round(
+            (new Date(booking.ends_at).getTime() -
+              selectedBounds.start.getTime()) /
+              60000,
+          ),
+        ),
+        kind: booking.kind,
+        status: booking.status,
+        customerName: customer?.full_name ?? null,
+        blockReason: booking.block_reason,
+      } satisfies OwnerTimelineBooking;
+    });
+
+  return {
+    today: getTodayInManila(),
+    weekStart,
+    selectedDay,
+    courts,
+    openingHour: settings.opening_hour,
+    closingHour: settings.closing_hour,
+    days,
+    timeline,
   };
 }
