@@ -6,6 +6,7 @@ import {
   COURT_REGION_SHORT,
   CourtLocation,
 } from "@/components/shared/court-location";
+import { SiteNav } from "@/components/shared/site-nav";
 import {
   getAvailabilityForDays,
   type AvailabilityRow,
@@ -148,28 +149,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-2 sm:gap-6" aria-label="Main navigation">
-            <Link
-              href="#availability"
-              className="hidden text-sm font-medium text-white/75 transition hover:text-white sm:block"
-            >
-              Availability
-            </Link>
-            <Link
-              href="/sign-in?next=/bookings"
-              prefetch={false}
-              className="hidden text-sm font-medium text-white/75 transition hover:text-white md:block"
-            >
-              My bookings
-            </Link>
-            <Link
-              href="/sign-in"
-              prefetch={false}
-              className="inline-flex min-h-11 items-center rounded-xl bg-gold-500 px-4 text-sm font-bold text-court-950 transition hover:bg-gold-200"
-            >
-              Sign in
-            </Link>
-          </nav>
+          <SiteNav />
         </div>
       </header>
 
