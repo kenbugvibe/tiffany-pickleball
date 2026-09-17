@@ -17,6 +17,14 @@ type CustomerRelation = {
 
 type CourtRelation = { name: string };
 
+type OpenPlayRelation = {
+  id: string;
+  reference: string;
+  title: string;
+  price_per_player: number;
+  is_published: boolean;
+};
+
 type BookingRow = {
   id: string;
   reference: string;
@@ -30,6 +38,7 @@ type BookingRow = {
   block_reason: string | null;
   customers: OneOrMany<CustomerRelation>;
   courts: OneOrMany<CourtRelation>;
+  open_play_sessions?: OneOrMany<OpenPlayRelation>;
 };
 
 type PaymentRow = {
@@ -68,6 +77,11 @@ export type OwnerTimelineBooking = {
   status: string;
   customerName: string | null;
   blockReason: string | null;
+  openPlaySessionId: string | null;
+  openPlayReference: string | null;
+  openPlayTitle: string | null;
+  openPlayPrice: number | null;
+  openPlayIsPublished: boolean;
 };
 
 export type OwnerPendingPayment = ReviewParent & {
@@ -287,7 +301,7 @@ export async function getOwnerTodayData() {
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_sessions(id, reference, title, price_per_player, is_published)",
       )
       .lt("starts_at", bounds.endIso)
       .gt("ends_at", bounds.startIso)
@@ -344,6 +358,7 @@ export async function getOwnerTodayData() {
   const timeline = bookingRows.map((booking) => {
     const customer = one(booking.customers);
     const court = one(booking.courts);
+    const openPlay = one(booking.open_play_sessions ?? null);
 
     return {
       id: booking.id,
@@ -370,6 +385,11 @@ export async function getOwnerTodayData() {
       status: booking.status,
       customerName: customer?.full_name ?? null,
       blockReason: booking.block_reason,
+      openPlaySessionId: openPlay?.id ?? null,
+      openPlayReference: openPlay?.reference ?? null,
+      openPlayTitle: openPlay?.title ?? null,
+      openPlayPrice: openPlay ? Number(openPlay.price_per_player) : null,
+      openPlayIsPublished: openPlay?.is_published ?? false,
     } satisfies OwnerTimelineBooking;
   });
 
@@ -468,13 +488,13 @@ export async function getOwnerCalendarData(
       .order("id"),
     supabase
       .from("business_settings")
-      .select("opening_hour, closing_hour")
+      .select("opening_hour, closing_hour, open_play_price_per_player")
       .eq("id", 1)
       .single(),
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_sessions(id, reference, title, price_per_player, is_published)",
       )
       .lt("starts_at", weekEnd.startIso)
       .gt("ends_at", weekBounds.startIso)
@@ -494,6 +514,7 @@ export async function getOwnerCalendarData(
   const settings = settingsResult.data as {
     opening_hour: number;
     closing_hour: number;
+    open_play_price_per_player: number;
   };
   const bookingRows = (bookingsResult.data ?? []) as unknown as BookingRow[];
   const minutesAvailablePerDay =
@@ -556,6 +577,7 @@ export async function getOwnerCalendarData(
     .map((booking) => {
       const customer = one(booking.customers);
       const court = one(booking.courts);
+      const openPlay = one(booking.open_play_sessions ?? null);
 
       return {
         id: booking.id,
@@ -584,6 +606,11 @@ export async function getOwnerCalendarData(
         status: booking.status,
         customerName: customer?.full_name ?? null,
         blockReason: booking.block_reason,
+        openPlaySessionId: openPlay?.id ?? null,
+        openPlayReference: openPlay?.reference ?? null,
+        openPlayTitle: openPlay?.title ?? null,
+        openPlayPrice: openPlay ? Number(openPlay.price_per_player) : null,
+        openPlayIsPublished: openPlay?.is_published ?? false,
       } satisfies OwnerTimelineBooking;
     });
 
@@ -595,6 +622,7 @@ export async function getOwnerCalendarData(
     courts,
     openingHour: settings.opening_hour,
     closingHour: settings.closing_hour,
+    openPlayPricePerPlayer: settings.open_play_price_per_player,
     days,
     timeline,
   };

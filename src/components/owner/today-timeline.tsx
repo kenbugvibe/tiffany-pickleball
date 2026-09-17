@@ -16,7 +16,7 @@ function hourLabel(hour: number) {
 
 function bookingLabel(booking: OwnerTimelineBooking) {
   if (booking.kind === "blocked") return booking.blockReason ?? "Court blocked";
-  if (booking.kind === "open_play") return "Open play";
+  if (booking.kind === "open_play") return booking.openPlayTitle ?? "Open play";
   if (booking.kind === "sunday_unli") return "Sunday unli";
   return booking.customerName ?? booking.reference;
 }

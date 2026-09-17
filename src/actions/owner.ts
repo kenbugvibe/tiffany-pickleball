@@ -12,6 +12,11 @@ import {
 import { getCourtBlockPreview } from "@/lib/data/owner";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
+import {
+  openPlayReturnPath,
+  openPlayTimes,
+  parseOpenPlaySelection,
+} from "@/lib/open-play";
 import { requireOwner } from "@/lib/owner-auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -266,5 +271,105 @@ export async function removeCourtBlockAction(formData: FormData) {
 
   redirect(
     `${courtBlockReturnPath(returnDate)}&unblocked=${encodeURIComponent(data)}`,
+  );
+}
+
+export async function createOpenPlaySessionAction(formData: FormData) {
+  await requireOwner();
+
+  const submittedDate = String(formData.get("openPlayDate") ?? "");
+  const returnDate = isIsoDate(submittedDate)
+    ? submittedDate
+    : getTodayInManila();
+  const parsed = parseOpenPlaySelection({
+    courtId: String(formData.get("courtId") ?? ""),
+    date: submittedDate,
+    startHour: String(formData.get("startHour") ?? ""),
+    endHour: String(formData.get("endHour") ?? ""),
+    title: String(formData.get("title") ?? ""),
+    customerNote: String(formData.get("customerNote") ?? ""),
+  });
+
+  if (!parsed.ok) {
+    redirect(`${openPlayReturnPath(returnDate)}&error=invalid-open-play`);
+  }
+
+  const selection = parsed.value;
+  const { startsAt, endsAt } = openPlayTimes(selection);
+
+  if (new Date(startsAt).getTime() <= Date.now()) {
+    redirect(`${openPlayReturnPath(returnDate)}&error=open-play-in-past`);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_open_play_session", {
+    p_court_id: selection.courtId,
+    p_starts_at: startsAt,
+    p_ends_at: endsAt,
+    p_title: selection.title,
+    p_customer_note: selection.customerNote || null,
+  });
+
+  if (error || !data || typeof data !== "object") {
+    const message = error?.message.toLowerCase() ?? "";
+    const errorCode = message.includes("no longer available")
+      ? "open-play-conflict"
+      : "open-play-publish-failed";
+    redirect(`${openPlayReturnPath(returnDate)}&error=${errorCode}`);
+  }
+
+  const result = data as { session_reference?: unknown };
+  const reference =
+    typeof result.session_reference === "string"
+      ? result.session_reference
+      : "created";
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+
+  redirect(
+    `${openPlayReturnPath(returnDate)}&publishedOpenPlay=${encodeURIComponent(reference)}`,
+  );
+}
+
+export async function removeOpenPlaySessionAction(formData: FormData) {
+  await requireOwner();
+
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const submittedDate = String(formData.get("returnDate") ?? "");
+  const returnDate = isIsoDate(submittedDate)
+    ? submittedDate
+    : getTodayInManila();
+
+  if (!UUID_PATTERN.test(sessionId)) {
+    redirect(`${openPlayReturnPath(returnDate)}&error=invalid-remove-open-play`);
+  }
+
+  if (formData.get("confirmed") !== "yes") {
+    redirect(
+      `${openPlayReturnPath(returnDate)}&error=remove-open-play-confirmation-required`,
+    );
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("remove_open_play_session", {
+    p_session_id: sessionId,
+  });
+
+  if (error || typeof data !== "string") {
+    const message = error?.message.toLowerCase() ?? "";
+    const errorCode = message.includes("active participants")
+      ? "open-play-has-participants"
+      : "remove-open-play-failed";
+    redirect(`${openPlayReturnPath(returnDate)}&error=${errorCode}`);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+
+  redirect(
+    `${openPlayReturnPath(returnDate)}&removedOpenPlay=${encodeURIComponent(data)}`,
   );
 }

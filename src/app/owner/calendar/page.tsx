@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CalendarDayGrid } from "@/components/owner/calendar-day-grid";
 import { CalendarWeek } from "@/components/owner/calendar-week";
 import { CourtBlockPanel } from "@/components/owner/court-block-panel";
+import { OpenPlayPanel } from "@/components/owner/open-play-panel";
 import { parseCourtBlockSelection } from "@/lib/court-blocks";
 import {
   addDaysToIsoDate,
@@ -30,6 +31,8 @@ type OwnerCalendarPageProps = {
     blockReason?: string | string[];
     blocked?: string | string[];
     unblocked?: string | string[];
+    publishedOpenPlay?: string | string[];
+    removedOpenPlay?: string | string[];
     cancelled?: string | string[];
     emailFailed?: string | string[];
     error?: string | string[];
@@ -82,6 +85,8 @@ export default async function OwnerCalendarPage({
   ]);
   const blocked = first(params.blocked);
   const unblocked = first(params.unblocked);
+  const publishedOpenPlay = first(params.publishedOpenPlay);
+  const removedOpenPlay = first(params.removedOpenPlay);
   const cancelled = Number(first(params.cancelled) ?? 0);
   const emailFailed = Number(first(params.emailFailed) ?? 0);
   const error = first(params.error);
@@ -95,6 +100,14 @@ export default async function OwnerCalendarPage({
     "invalid-remove-block": "The selected court block was invalid.",
     "remove-confirmation-required": "Confirm that you want to reopen the blocked period.",
     "remove-block-failed": "The court block could not be removed. Confirm the remove-block migration is applied, then try again.",
+    "invalid-open-play": "The open-play details were invalid. Review the fields and try again.",
+    "open-play-in-past": "Choose an open-play session that starts in the future.",
+    "open-play-conflict": "That court is already occupied during the selected period. Choose another court or time.",
+    "open-play-publish-failed": "Open play could not be published. Confirm the Open Play migration is applied, then try again.",
+    "invalid-remove-open-play": "The selected open-play session was invalid.",
+    "remove-open-play-confirmation-required": "Confirm that you want to remove the open-play session.",
+    "open-play-has-participants": "This open-play session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
+    "remove-open-play-failed": "The open-play session could not be removed. Confirm the Open Play migration is applied, then try again.",
   };
   const selectedError = error ? errorMessages[error] : null;
   const inputError = parsedBlock && !parsedBlock.ok ? parsedBlock.error : null;
@@ -162,6 +175,20 @@ export default async function OwnerCalendarPage({
         </div>
       ) : null}
 
+      {publishedOpenPlay ? (
+        <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">
+          Open-play session {publishedOpenPlay} published. It is now visible on
+          public availability.
+        </div>
+      ) : null}
+
+      {removedOpenPlay ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Open-play session {removedOpenPlay} removed. The court period is
+          available for new bookings again.
+        </div>
+      ) : null}
+
       {emailFailed > 0 ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span className="font-bold">
@@ -186,6 +213,17 @@ export default async function OwnerCalendarPage({
           openingHour={data.openingHour}
           closingHour={data.closingHour}
           nowIso={data.nowIso}
+        />
+      </div>
+
+      <div className="mt-7">
+        <OpenPlayPanel
+          courts={data.courts}
+          today={data.today}
+          selectedDay={selectedDay}
+          openingHour={data.openingHour}
+          closingHour={data.closingHour}
+          pricePerPlayer={data.openPlayPricePerPlayer}
         />
       </div>
 

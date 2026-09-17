@@ -1,4 +1,7 @@
-import { removeCourtBlockAction } from "@/actions/owner";
+import {
+  removeCourtBlockAction,
+  removeOpenPlaySessionAction,
+} from "@/actions/owner";
 import { manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerTimelineBooking } from "@/lib/data/owner";
 
@@ -33,7 +36,7 @@ function bookingLabel(booking: OwnerTimelineBooking) {
     return booking.blockReason ?? "Court blocked";
   }
 
-  if (booking.kind === "open_play") return "Open play";
+  if (booking.kind === "open_play") return booking.openPlayTitle ?? "Open play";
   if (booking.kind === "sunday_unli") return "Sunday unli";
 
   return booking.customerName ?? booking.reference;
@@ -77,6 +80,13 @@ export function CalendarDayGrid({
   const removableBlocks = bookings.filter(
     (booking) =>
       booking.kind === "blocked" && new Date(booking.endsAt).getTime() > now,
+  );
+  const removableOpenPlay = bookings.filter(
+    (booking) =>
+      booking.kind === "open_play" &&
+      booking.openPlaySessionId &&
+      booking.openPlayIsPublished &&
+      new Date(booking.endsAt).getTime() > now,
   );
 
   return (
@@ -167,6 +177,79 @@ export function CalendarDayGrid({
                           className="mt-0.5 size-4 accent-red-700"
                         />
                         Reopen this court period for new bookings.
+                      </label>
+                      <button
+                        type="submit"
+                        className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
+                      >
+                        Confirm removal
+                      </button>
+                    </form>
+                  </details>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {removableOpenPlay.length > 0 ? (
+        <div className="border-b border-sky-100 bg-sky-50 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700">
+            Manage open play
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {removableOpenPlay.map((booking) => (
+              <article
+                key={booking.id}
+                className="rounded-xl border border-sky-200 bg-white p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-ink-900">
+                      {booking.openPlayTitle ?? "Open play"}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-500">
+                      {booking.courtName} ·{" "}
+                      {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
+                      {manilaTimeFormatter.format(new Date(booking.endsAt))}
+                      {booking.openPlayPrice
+                        ? ` · ₱${booking.openPlayPrice} per person`
+                        : ""}
+                    </p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
+                      {booking.openPlayReference ?? booking.reference}
+                    </p>
+                  </div>
+
+                  <details className="group sm:text-right">
+                    <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
+                      Remove event
+                    </summary>
+                    <form
+                      action={removeOpenPlaySessionAction}
+                      className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3 text-left"
+                    >
+                      <input
+                        type="hidden"
+                        name="sessionId"
+                        value={booking.openPlaySessionId ?? ""}
+                      />
+                      <input
+                        type="hidden"
+                        name="returnDate"
+                        value={selectedDay}
+                      />
+                      <label className="flex items-start gap-2 text-xs leading-5 text-red-900">
+                        <input
+                          type="checkbox"
+                          name="confirmed"
+                          value="yes"
+                          required
+                          className="mt-0.5 size-4 accent-red-700"
+                        />
+                        Unpublish this event and reopen the court. Removal is
+                        blocked if customers have already joined.
                       </label>
                       <button
                         type="submit"
