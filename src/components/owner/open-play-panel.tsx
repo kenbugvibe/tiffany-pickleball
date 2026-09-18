@@ -1,4 +1,5 @@
 import { createOpenPlaySessionAction } from "@/actions/owner";
+import { CourtMultiSelector } from "@/components/owner/court-multi-selector";
 import { formatPeso } from "@/lib/money";
 
 type OpenPlayPanelProps = {
@@ -46,8 +47,8 @@ export function OpenPlayPanel({
               Publish open play
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-500">
-              Reserve one court for a public session. Customers will see the
-              event in availability at the configured entry price.
+              Reserve one or more courts for a public session. Customers will
+              see the event in availability at the configured entry price.
             </p>
           </div>
           <span className="w-fit rounded-full bg-sky-100 px-3 py-1.5 text-xs font-bold text-sky-900">
@@ -58,23 +59,16 @@ export function OpenPlayPanel({
 
       <form
         action={createOpenPlaySessionAction}
-        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-5"
+        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"
       >
-        <label className="grid gap-1.5 text-sm font-bold text-ink-900">
-          Court
-          <select
-            name="courtId"
-            defaultValue={String(courts[0]?.id ?? "")}
-            required
-            className="min-h-11 rounded-xl border border-court-800/20 bg-white px-3 font-normal outline-none focus:border-sky-600"
-          >
-            {courts.map((court) => (
-              <option key={court.id} value={court.id}>
-                {court.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CourtMultiSelector
+          courts={courts}
+          inputName="courtId"
+          idPrefix="open-play-court"
+          description="Choose one court, any two courts, or all three for the same event."
+          emptySelectionMessage="Select at least one court before publishing."
+          tone="sky"
+        />
 
         <label className="grid gap-1.5 text-sm font-bold text-ink-900">
           Date
@@ -120,7 +114,7 @@ export function OpenPlayPanel({
           </select>
         </label>
 
-        <label className="grid gap-1.5 text-sm font-bold text-ink-900 md:col-span-2 xl:col-span-1">
+        <label className="grid gap-1.5 text-sm font-bold text-ink-900">
           Event title
           <input
             type="text"
@@ -133,7 +127,7 @@ export function OpenPlayPanel({
           />
         </label>
 
-        <label className="grid gap-1.5 text-sm font-bold text-ink-900 md:col-span-2 xl:col-span-5">
+        <label className="grid gap-1.5 text-sm font-bold text-ink-900 md:col-span-2 xl:col-span-4">
           Customer note <span className="font-normal text-ink-500">(optional)</span>
           <textarea
             name="customerNote"
@@ -144,7 +138,7 @@ export function OpenPlayPanel({
           />
         </label>
 
-        <div className="md:col-span-2 xl:col-span-5">
+        <div className="md:col-span-2 xl:col-span-4">
           <button
             type="submit"
             disabled={courts.length === 0}
@@ -153,8 +147,8 @@ export function OpenPlayPanel({
             Publish open play
           </button>
           <p className="mt-2 text-xs leading-5 text-ink-500">
-            Publishing fails safely if the court is already booked, blocked, or
-            assigned to another event.
+            Publishing fails safely if any selected court is already booked,
+            blocked, or assigned to another event.
           </p>
         </div>
       </form>

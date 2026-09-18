@@ -30,6 +30,7 @@ type OwnerCalendarPageProps = {
     blockEnd?: string | string[];
     blockReason?: string | string[];
     blocked?: string | string[];
+    blockedCount?: string | string[];
     unblocked?: string | string[];
     publishedOpenPlay?: string | string[];
     removedOpenPlay?: string | string[];
@@ -41,6 +42,12 @@ type OwnerCalendarPageProps = {
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function all(value: string | string[] | undefined) {
+  if (value === undefined) return [];
+
+  return Array.isArray(value) ? value : [value];
 }
 
 export default async function OwnerCalendarPage({
@@ -65,15 +72,20 @@ export default async function OwnerCalendarPage({
       ? requestedDay
       : defaultDay);
   const rawBlockInput = {
-    courtId: first(params.blockCourt),
+    courtIds: all(params.blockCourt),
     date: first(params.blockDate),
     startHour: first(params.blockStart),
     endHour: first(params.blockEnd),
     reason: first(params.blockReason),
   };
-  const hasBlockInput = Object.values(rawBlockInput).every(
-    (value) => value !== undefined,
-  );
+  const hasBlockInput =
+    rawBlockInput.courtIds.length > 0 ||
+    [
+      rawBlockInput.date,
+      rawBlockInput.startHour,
+      rawBlockInput.endHour,
+      rawBlockInput.reason,
+    ].some((value) => value !== undefined);
   const parsedBlock = hasBlockInput
     ? parseCourtBlockSelection(rawBlockInput)
     : null;
@@ -84,6 +96,7 @@ export default async function OwnerCalendarPage({
       : Promise.resolve(null),
   ]);
   const blocked = first(params.blocked);
+  const blockedCount = Number(first(params.blockedCount) ?? 1);
   const unblocked = first(params.unblocked);
   const publishedOpenPlay = first(params.publishedOpenPlay);
   const removedOpenPlay = first(params.removedOpenPlay);
@@ -102,7 +115,7 @@ export default async function OwnerCalendarPage({
     "remove-block-failed": "The court block could not be removed. Confirm the remove-block migration is applied, then try again.",
     "invalid-open-play": "The open-play details were invalid. Review the fields and try again.",
     "open-play-in-past": "Choose an open-play session that starts in the future.",
-    "open-play-conflict": "That court is already occupied during the selected period. Choose another court or time.",
+    "open-play-conflict": "One or more selected courts are already occupied during that period. Change the court selection or time.",
     "open-play-publish-failed": "Open play could not be published. Confirm the Open Play migration is applied, then try again.",
     "invalid-remove-open-play": "The selected open-play session was invalid.",
     "remove-open-play-confirmation-required": "Confirm that you want to remove the open-play session.",
@@ -114,14 +127,14 @@ export default async function OwnerCalendarPage({
   const defaultCourtId = String(data.courts[0]?.id ?? "");
   const draft = parsedBlock?.ok
     ? {
-        courtId: String(parsedBlock.value.courtId),
+        courtIds: parsedBlock.value.courtIds.map(String),
         date: parsedBlock.value.date,
         startHour: String(parsedBlock.value.startHour),
         endHour: String(parsedBlock.value.endHour),
         reason: parsedBlock.value.reason,
       }
     : {
-        courtId: defaultCourtId,
+        courtIds: defaultCourtId ? [defaultCourtId] : [],
         date: selectedDay >= data.today ? selectedDay : data.today,
         startHour: String(data.openingHour),
         endHour: String(data.openingHour + 1),
@@ -161,7 +174,7 @@ export default async function OwnerCalendarPage({
 
       {blocked ? (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Court block {blocked} created.
+          Court {blockedCount === 1 ? "block" : "blocks"} {blocked} created.
           {cancelled > 0
             ? ` ${cancelled} customer ${cancelled === 1 ? "booking was" : "bookings were"} cancelled.`
             : " No customer bookings were affected."}

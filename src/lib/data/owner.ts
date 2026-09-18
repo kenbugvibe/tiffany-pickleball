@@ -25,6 +25,10 @@ type OpenPlayRelation = {
   is_published: boolean;
 };
 
+type OpenPlayCourtRelation = {
+  open_play_sessions: OneOrMany<OpenPlayRelation>;
+};
+
 type BookingRow = {
   id: string;
   reference: string;
@@ -38,7 +42,7 @@ type BookingRow = {
   block_reason: string | null;
   customers: OneOrMany<CustomerRelation>;
   courts: OneOrMany<CourtRelation>;
-  open_play_sessions?: OneOrMany<OpenPlayRelation>;
+  open_play_session_courts?: OneOrMany<OpenPlayCourtRelation>;
 };
 
 type PaymentRow = {
@@ -116,6 +120,7 @@ export type OwnerCalendarDaySummary = {
 export type OwnerCourtBlockConflict = {
   id: string;
   reference: string;
+  courtName: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -130,6 +135,7 @@ export type OwnerCourtBlockConflict = {
 export type OwnerCourtBlockSpecialConflict = {
   id: string;
   reference: string;
+  courtName: string;
   kind: string;
   label: string;
   startsAt: string;
@@ -138,7 +144,7 @@ export type OwnerCourtBlockSpecialConflict = {
 
 export type OwnerCourtBlockPreview = {
   selection: CourtBlockSelection;
-  courtName: string | null;
+  courtNames: string[];
   startsAt: string;
   endsAt: string;
   error: string | null;
@@ -301,7 +307,7 @@ export async function getOwnerTodayData() {
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_sessions(id, reference, title, price_per_player, is_published)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published))",
       )
       .lt("starts_at", bounds.endIso)
       .gt("ends_at", bounds.startIso)
@@ -358,7 +364,8 @@ export async function getOwnerTodayData() {
   const timeline = bookingRows.map((booking) => {
     const customer = one(booking.customers);
     const court = one(booking.courts);
-    const openPlay = one(booking.open_play_sessions ?? null);
+    const openPlayCourt = one(booking.open_play_session_courts ?? null);
+    const openPlay = one(openPlayCourt?.open_play_sessions ?? null);
 
     return {
       id: booking.id,
@@ -494,7 +501,7 @@ export async function getOwnerCalendarData(
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_sessions(id, reference, title, price_per_player, is_published)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published))",
       )
       .lt("starts_at", weekEnd.startIso)
       .gt("ends_at", weekBounds.startIso)
@@ -577,7 +584,8 @@ export async function getOwnerCalendarData(
     .map((booking) => {
       const customer = one(booking.customers);
       const court = one(booking.courts);
-      const openPlay = one(booking.open_play_sessions ?? null);
+      const openPlayCourt = one(booking.open_play_session_courts ?? null);
+      const openPlay = one(openPlayCourt?.open_play_sessions ?? null);
 
       return {
         id: booking.id,
@@ -640,9 +648,9 @@ export async function getCourtBlockPreview(
     supabase
       .from("courts")
       .select("id, name")
-      .eq("id", selection.courtId)
+      .in("id", selection.courtIds)
       .eq("is_active", true)
-      .maybeSingle(),
+      .order("id"),
     supabase
       .from("business_settings")
       .select("opening_hour, closing_hour")
@@ -651,12 +659,13 @@ export async function getCourtBlockPreview(
     supabase
       .from("bookings")
       .select(
-        "id, reference, starts_at, ends_at, kind, status, block_reason, customers(full_name, phone, email), payments(status, amount)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, block_reason, courts(name), customers(full_name, phone, email), payments(status, amount)",
       )
-      .eq("court_id", selection.courtId)
+      .in("court_id", selection.courtIds)
       .neq("status", "cancelled")
       .lt("starts_at", endsAt)
       .gt("ends_at", startsAt)
+      .order("court_id")
       .order("starts_at"),
   ]);
 
@@ -666,7 +675,7 @@ export async function getCourtBlockPreview(
 
   const base = {
     selection,
-    courtName: courtResult.data?.name ?? null,
+    courtNames: (courtResult.data ?? []).map((court) => court.name),
     startsAt,
     endsAt,
     emailConfigured: isCustomerEmailConfigured(),
@@ -674,8 +683,8 @@ export async function getCourtBlockPreview(
     specialConflicts: [] as OwnerCourtBlockSpecialConflict[],
   };
 
-  if (!courtResult.data) {
-    return { ...base, error: "Choose an active court." };
+  if (courtResult.data.length !== selection.courtIds.length) {
+    return { ...base, error: "Choose only active courts." };
   }
 
   if (
@@ -700,6 +709,7 @@ export async function getCourtBlockPreview(
     kind: string;
     status: string;
     block_reason: string | null;
+    courts: OneOrMany<{ name: string }>;
     customers: OneOrMany<CustomerRelation>;
     payments: OneOrMany<{ status: string; amount: number }>;
   };
@@ -710,10 +720,12 @@ export async function getCourtBlockPreview(
     .map((booking) => {
       const customer = one(booking.customers);
       const payment = one(booking.payments);
+      const court = one(booking.courts);
 
       return {
         id: booking.id,
         reference: booking.reference,
+        courtName: court?.name ?? "Court",
         customerName: customer?.full_name ?? "Customer",
         customerEmail: customer?.email ?? "Not available",
         customerPhone: customer?.phone ?? "Not available",
@@ -735,6 +747,7 @@ export async function getCourtBlockPreview(
         ({
           id: booking.id,
           reference: booking.reference,
+          courtName: one(booking.courts)?.name ?? "Court",
           kind: booking.kind,
           label:
             booking.kind === "blocked"

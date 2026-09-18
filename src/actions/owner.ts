@@ -9,6 +9,7 @@ import {
   UUID_PATTERN,
   manilaHourToIso,
 } from "@/lib/court-blocks";
+import type { CourtBlockSelection } from "@/lib/court-blocks";
 import { getCourtBlockPreview } from "@/lib/data/owner";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
@@ -45,24 +46,20 @@ export async function reviewPaymentAction(formData: FormData) {
 }
 
 function blockPreviewPath(
-  selection: {
-    courtId: number;
-    date: string;
-    startHour: number;
-    endHour: number;
-    reason: string;
-  },
+  selection: CourtBlockSelection,
   error: string,
 ) {
   const params = new URLSearchParams({
     week: selection.date,
     day: selection.date,
-    blockCourt: String(selection.courtId),
     blockDate: selection.date,
     blockStart: String(selection.startHour),
     blockEnd: String(selection.endHour),
     blockReason: selection.reason,
     error,
+  });
+  selection.courtIds.forEach((courtId) => {
+    params.append("blockCourt", String(courtId));
   });
 
   return `/owner/calendar?${params.toString()}`;
@@ -72,7 +69,7 @@ export async function createCourtBlockAction(formData: FormData) {
   await requireOwner();
 
   const parsed = parseCourtBlockSelection({
-    courtId: String(formData.get("courtId") ?? ""),
+    courtIds: formData.getAll("courtId").map(String),
     date: String(formData.get("blockDate") ?? ""),
     startHour: String(formData.get("startHour") ?? ""),
     endHour: String(formData.get("endHour") ?? ""),
@@ -131,7 +128,7 @@ export async function createCourtBlockAction(formData: FormData) {
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_court_block", {
-    p_court_id: selection.courtId,
+    p_court_ids: selection.courtIds,
     p_starts_at: manilaHourToIso(selection.date, selection.startHour),
     p_ends_at: manilaHourToIso(selection.date, selection.endHour),
     p_reason: selection.reason,
@@ -148,14 +145,21 @@ export async function createCourtBlockAction(formData: FormData) {
   }
 
   const result = data as {
-    block_reference?: unknown;
+    block_references?: unknown;
+    block_count?: unknown;
     cancelled_count?: unknown;
     notification_ids?: unknown;
   };
-  const blockReference =
-    typeof result.block_reference === "string"
-      ? result.block_reference
-      : "created";
+  const blockReferences = Array.isArray(result.block_references)
+    ? result.block_references.filter(
+        (value): value is string => typeof value === "string",
+      )
+    : [];
+  const blockReference = blockReferences.join(", ") || "created";
+  const blockCount =
+    typeof result.block_count === "number"
+      ? result.block_count
+      : selection.courtIds.length;
   const cancelledCount =
     typeof result.cancelled_count === "number"
       ? result.cancelled_count
@@ -230,6 +234,7 @@ export async function createCourtBlockAction(formData: FormData) {
 
   const successParams = new URLSearchParams({
     blocked: blockReference,
+    blockedCount: String(blockCount),
     cancelled: String(cancelledCount),
   });
 
@@ -282,7 +287,7 @@ export async function createOpenPlaySessionAction(formData: FormData) {
     ? submittedDate
     : getTodayInManila();
   const parsed = parseOpenPlaySelection({
-    courtId: String(formData.get("courtId") ?? ""),
+    courtIds: formData.getAll("courtId").map(String),
     date: submittedDate,
     startHour: String(formData.get("startHour") ?? ""),
     endHour: String(formData.get("endHour") ?? ""),
@@ -303,7 +308,7 @@ export async function createOpenPlaySessionAction(formData: FormData) {
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_open_play_session", {
-    p_court_id: selection.courtId,
+    p_court_ids: selection.courtIds,
     p_starts_at: startsAt,
     p_ends_at: endsAt,
     p_title: selection.title,

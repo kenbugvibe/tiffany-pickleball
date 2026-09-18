@@ -1,4 +1,5 @@
 import { createCourtBlockAction } from "@/actions/owner";
+import { CourtMultiSelector } from "@/components/owner/court-multi-selector";
 import { manilaScheduleFormatter, manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerCourtBlockPreview } from "@/lib/data/owner";
 import { formatPeso } from "@/lib/money";
@@ -11,7 +12,7 @@ type CourtBlockPanelProps = {
   openingHour: number;
   closingHour: number;
   draft: {
-    courtId: string;
+    courtIds: string[];
     date: string;
     startHour: string;
     endHour: string;
@@ -65,10 +66,10 @@ export function CourtBlockPanel({
           Court controls
         </p>
         <h2 className="mt-1 font-display text-2xl font-bold text-ink-900">
-          Block a court
+          Block courts
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-500">
-          Preview the impact before making a court unavailable. Existing
+          Preview the impact before making selected courts unavailable. Existing
           customer reservations are never cancelled without a second,
           explicit confirmation.
         </p>
@@ -77,26 +78,20 @@ export function CourtBlockPanel({
       <form
         action="/owner/calendar"
         method="get"
-        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-5"
+        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"
       >
         <input type="hidden" name="week" value={weekStart} />
         <input type="hidden" name="day" value={selectedDay} />
 
-        <label className="grid gap-1.5 text-sm font-bold text-ink-900">
-          Court
-          <select
-            name="blockCourt"
-            defaultValue={draft.courtId}
-            required
-            className="min-h-11 rounded-xl border border-court-800/20 bg-white px-3 font-normal outline-none focus:border-court-700"
-          >
-            {courts.map((court) => (
-              <option key={court.id} value={court.id}>
-                {court.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CourtMultiSelector
+          key={draft.courtIds.join("-")}
+          courts={courts}
+          inputName="blockCourt"
+          idPrefix="court-block-court"
+          description="Choose one court, any two courts, or all three for the same blocked period."
+          emptySelectionMessage="Select at least one court before previewing the impact."
+          defaultSelectedCourtIds={draft.courtIds.map(Number)}
+        />
 
         <label className="grid gap-1.5 text-sm font-bold text-ink-900">
           Date
@@ -142,7 +137,7 @@ export function CourtBlockPanel({
           </select>
         </label>
 
-        <label className="grid gap-1.5 text-sm font-bold text-ink-900 md:col-span-2 xl:col-span-1">
+        <label className="grid gap-1.5 text-sm font-bold text-ink-900">
           Reason
           <input
             type="text"
@@ -156,7 +151,7 @@ export function CourtBlockPanel({
           />
         </label>
 
-        <div className="md:col-span-2 xl:col-span-5">
+        <div className="md:col-span-2 xl:col-span-4">
           <button
             type="submit"
             className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-court-800 px-5 text-sm font-bold text-court-800 transition hover:bg-court-800/5 sm:w-auto"
@@ -174,7 +169,7 @@ export function CourtBlockPanel({
                 Confirmation preview
               </p>
               <h3 className="mt-1 font-display text-xl font-bold text-ink-900">
-                {preview.courtName ?? "Court"}
+                {preview.courtNames.join(", ") || "Selected courts"}
               </h3>
               <p className="mt-1 text-sm text-ink-500">
                 {manilaScheduleFormatter.format(new Date(preview.startsAt))} to{" "}
@@ -202,7 +197,7 @@ export function CourtBlockPanel({
               <ul className="mt-2 list-disc pl-5">
                 {preview.specialConflicts.map((conflict) => (
                   <li key={conflict.id}>
-                    {conflict.label} ({conflict.reference})
+                    {conflict.courtName}: {conflict.label} ({conflict.reference})
                   </li>
                 ))}
               </ul>
@@ -230,6 +225,7 @@ export function CourtBlockPanel({
                     </span>
                   </div>
                   <p className="mt-3 text-sm text-ink-900">
+                    {booking.courtName} ·{" "}
                     {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
                     {manilaTimeFormatter.format(new Date(booking.endsAt))}
                   </p>
@@ -265,7 +261,14 @@ export function CourtBlockPanel({
 
           {!preview.error ? (
             <form action={createCourtBlockAction} className="mt-5">
-              <input type="hidden" name="courtId" value={preview.selection.courtId} />
+              {preview.selection.courtIds.map((courtId) => (
+                <input
+                  key={courtId}
+                  type="hidden"
+                  name="courtId"
+                  value={courtId}
+                />
+              ))}
               <input type="hidden" name="blockDate" value={preview.selection.date} />
               <input type="hidden" name="startHour" value={preview.selection.startHour} />
               <input type="hidden" name="endHour" value={preview.selection.endHour} />
@@ -289,7 +292,9 @@ export function CourtBlockPanel({
                   className="mt-1 size-4 accent-court-800"
                 />
                 <span>
-                  I confirm this court block
+                  I confirm {preview.selection.courtIds.length === 1
+                    ? "this court block"
+                    : `these ${preview.selection.courtIds.length} court blocks`}
                   {hasAffectedBookings
                     ? ` and the cancellation of ${preview.affectedBookings.length} customer ${preview.affectedBookings.length === 1 ? "booking" : "bookings"}`
                     : ""}
@@ -303,7 +308,9 @@ export function CourtBlockPanel({
                 disabled={cannotConfirm}
                 className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-court-800 px-5 text-sm font-bold text-white transition hover:bg-court-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
               >
-                Confirm court block
+                Confirm {preview.selection.courtIds.length === 1
+                  ? "court block"
+                  : `${preview.selection.courtIds.length} court blocks`}
               </button>
             </form>
           ) : null}

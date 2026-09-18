@@ -2,7 +2,7 @@ import { manilaHourToIso } from "@/lib/court-blocks";
 import { isIsoDate } from "@/lib/dates";
 
 export type OpenPlaySelection = {
-  courtId: number;
+  courtIds: number[];
   date: string;
   startHour: number;
   endHour: number;
@@ -11,7 +11,7 @@ export type OpenPlaySelection = {
 };
 
 type OpenPlayInput = {
-  courtId?: string;
+  courtIds?: string[];
   date?: string;
   startHour?: string;
   endHour?: string;
@@ -26,14 +26,23 @@ export type OpenPlayParseResult =
 export function parseOpenPlaySelection(
   input: OpenPlayInput,
 ): OpenPlayParseResult {
-  const courtId = Number(input.courtId);
+  const submittedCourtIds = input.courtIds ?? [];
+  const parsedCourtIds = submittedCourtIds.map(Number);
+  const courtIds = Array.from(new Set(parsedCourtIds)).sort(
+    (first, second) => first - second,
+  );
   const startHour = Number(input.startHour);
   const endHour = Number(input.endHour);
   const title = input.title?.trim() ?? "";
   const customerNote = input.customerNote?.trim() ?? "";
 
-  if (!Number.isInteger(courtId) || courtId < 1 || courtId > 32767) {
-    return { ok: false, error: "Choose a valid court." };
+  if (
+    courtIds.length < 1 ||
+    courtIds.length > 3 ||
+    parsedCourtIds.some((courtId) => !Number.isInteger(courtId)) ||
+    courtIds.some((courtId) => courtId < 1 || courtId > 32767)
+  ) {
+    return { ok: false, error: "Choose one, two, or all three courts." };
   }
 
   if (!isIsoDate(input.date)) {
@@ -72,7 +81,7 @@ export function parseOpenPlaySelection(
   return {
     ok: true,
     value: {
-      courtId,
+      courtIds,
       date: input.date,
       startHour,
       endHour,

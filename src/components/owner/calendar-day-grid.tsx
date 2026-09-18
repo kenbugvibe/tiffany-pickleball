@@ -81,13 +81,23 @@ export function CalendarDayGrid({
     (booking) =>
       booking.kind === "blocked" && new Date(booking.endsAt).getTime() > now,
   );
-  const removableOpenPlay = bookings.filter(
-    (booking) =>
-      booking.kind === "open_play" &&
-      booking.openPlaySessionId &&
-      booking.openPlayIsPublished &&
-      new Date(booking.endsAt).getTime() > now,
-  );
+  const seenOpenPlaySessions = new Set<string>();
+  const removableOpenPlay = bookings.filter((booking) => {
+    const sessionId = booking.openPlaySessionId;
+
+    if (
+      booking.kind !== "open_play" ||
+      !sessionId ||
+      !booking.openPlayIsPublished ||
+      new Date(booking.endsAt).getTime() <= now ||
+      seenOpenPlaySessions.has(sessionId)
+    ) {
+      return false;
+    }
+
+    seenOpenPlaySessions.add(sessionId);
+    return true;
+  });
 
   return (
     <section className="rounded-2xl border border-court-800/10 bg-white">
@@ -210,7 +220,14 @@ export function CalendarDayGrid({
                       {booking.openPlayTitle ?? "Open play"}
                     </p>
                     <p className="mt-1 text-xs text-ink-500">
-                      {booking.courtName} ·{" "}
+                      {bookings
+                        .filter(
+                          (candidate) =>
+                            candidate.openPlaySessionId ===
+                            booking.openPlaySessionId,
+                        )
+                        .map((candidate) => candidate.courtName)
+                        .join(", ")} ·{" "}
                       {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
                       {manilaTimeFormatter.format(new Date(booking.endsAt))}
                       {booking.openPlayPrice

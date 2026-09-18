@@ -1,7 +1,7 @@
 import { addDaysToIsoDate, isIsoDate } from "@/lib/dates";
 
 export type CourtBlockSelection = {
-  courtId: number;
+  courtIds: number[];
   date: string;
   startHour: number;
   endHour: number;
@@ -9,7 +9,7 @@ export type CourtBlockSelection = {
 };
 
 type CourtBlockInput = {
-  courtId?: string;
+  courtIds?: string[];
   date?: string;
   startHour?: string;
   endHour?: string;
@@ -26,13 +26,22 @@ export const UUID_PATTERN =
 export function parseCourtBlockSelection(
   input: CourtBlockInput,
 ): CourtBlockParseResult {
-  const courtId = Number(input.courtId);
+  const submittedCourtIds = input.courtIds ?? [];
+  const parsedCourtIds = submittedCourtIds.map(Number);
+  const courtIds = Array.from(new Set(parsedCourtIds)).sort(
+    (first, second) => first - second,
+  );
   const startHour = Number(input.startHour);
   const endHour = Number(input.endHour);
   const reason = input.reason?.trim() ?? "";
 
-  if (!Number.isInteger(courtId) || courtId < 1 || courtId > 32767) {
-    return { ok: false, error: "Choose a valid court." };
+  if (
+    courtIds.length < 1 ||
+    courtIds.length > 3 ||
+    parsedCourtIds.some((courtId) => !Number.isInteger(courtId)) ||
+    courtIds.some((courtId) => courtId < 1 || courtId > 32767)
+  ) {
+    return { ok: false, error: "Choose one, two, or all three courts." };
   }
 
   if (!isIsoDate(input.date)) {
@@ -64,7 +73,7 @@ export function parseCourtBlockSelection(
   return {
     ok: true,
     value: {
-      courtId,
+      courtIds,
       date: input.date,
       startHour,
       endHour,
