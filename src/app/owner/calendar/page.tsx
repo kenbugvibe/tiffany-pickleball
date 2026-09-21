@@ -4,6 +4,7 @@ import { CalendarDayGrid } from "@/components/owner/calendar-day-grid";
 import { CalendarWeek } from "@/components/owner/calendar-week";
 import { CourtBlockPanel } from "@/components/owner/court-block-panel";
 import { OpenPlayPanel } from "@/components/owner/open-play-panel";
+import { SundayUnliPanel } from "@/components/owner/sunday-unli-panel";
 import { parseCourtBlockSelection } from "@/lib/court-blocks";
 import {
   addDaysToIsoDate,
@@ -34,6 +35,8 @@ type OwnerCalendarPageProps = {
     unblocked?: string | string[];
     publishedOpenPlay?: string | string[];
     removedOpenPlay?: string | string[];
+    publishedSundayUnli?: string | string[];
+    removedSundayUnli?: string | string[];
     cancelled?: string | string[];
     emailFailed?: string | string[];
     error?: string | string[];
@@ -100,6 +103,8 @@ export default async function OwnerCalendarPage({
   const unblocked = first(params.unblocked);
   const publishedOpenPlay = first(params.publishedOpenPlay);
   const removedOpenPlay = first(params.removedOpenPlay);
+  const publishedSundayUnli = first(params.publishedSundayUnli);
+  const removedSundayUnli = first(params.removedSundayUnli);
   const cancelled = Number(first(params.cancelled) ?? 0);
   const emailFailed = Number(first(params.emailFailed) ?? 0);
   const error = first(params.error);
@@ -121,6 +126,14 @@ export default async function OwnerCalendarPage({
     "remove-open-play-confirmation-required": "Confirm that you want to remove the open-play session.",
     "open-play-has-participants": "This open-play session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
     "remove-open-play-failed": "The open-play session could not be removed. Confirm the Open Play migration is applied, then try again.",
+    "invalid-sunday-unli": "Choose a valid Sunday and review the Sunday Unli details.",
+    "sunday-unli-in-past": "Choose a future Sunday Unli session.",
+    "sunday-unli-conflict": "One or more courts are already occupied Sunday evening. Remove the conflict or choose another Sunday.",
+    "sunday-unli-publish-failed": "Sunday Unli could not be published. Confirm the Sunday Unli migration is applied, then try again.",
+    "invalid-remove-sunday-unli": "The selected Sunday Unli session was invalid.",
+    "remove-sunday-unli-confirmation-required": "Confirm that you want to remove the Sunday Unli session.",
+    "sunday-unli-has-participants": "This Sunday Unli session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
+    "remove-sunday-unli-failed": "The Sunday Unli session could not be removed. Confirm the Sunday Unli migration is applied, then try again.",
   };
   const selectedError = error ? errorMessages[error] : null;
   const inputError = parsedBlock && !parsedBlock.ok ? parsedBlock.error : null;
@@ -202,6 +215,20 @@ export default async function OwnerCalendarPage({
         </div>
       ) : null}
 
+      {publishedSundayUnli ? (
+        <div className="mt-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-900">
+          Sunday Unli session {publishedSundayUnli} published. It is now
+          visible on public availability.
+        </div>
+      ) : null}
+
+      {removedSundayUnli ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Sunday Unli session {removedSundayUnli} removed. All three courts are
+          available for new bookings again.
+        </div>
+      ) : null}
+
       {emailFailed > 0 ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span className="font-bold">
@@ -226,6 +253,15 @@ export default async function OwnerCalendarPage({
           openingHour={data.openingHour}
           closingHour={data.closingHour}
           nowIso={data.nowIso}
+        />
+      </div>
+
+      <div className="mt-7">
+        <SundayUnliPanel
+          today={data.today}
+          selectedDay={selectedDay}
+          courtNames={data.courts.map((court) => court.name)}
+          pricePerPlayer={data.sundayUnliPricePerPlayer}
         />
       </div>
 

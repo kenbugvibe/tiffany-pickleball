@@ -4,6 +4,7 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 
 import { submitPaymentProofAction } from "@/actions/bookings";
 import { submitOpenPlayPaymentProofAction } from "@/actions/open-play";
+import { submitSundayUnliPaymentProofAction } from "@/actions/sunday-unli";
 import { emptyBookingActionState } from "@/lib/booking-form-state";
 
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -15,14 +16,16 @@ export function ReceiptUploadForm({
   paymentConfigured,
 }: {
   reference: string;
-  paymentKind?: "booking" | "open-play";
+  paymentKind?: "booking" | "open-play" | "sunday-unli";
   expiresAt: string;
   paymentConfigured: boolean;
 }) {
   const submitAction =
     paymentKind === "open-play"
       ? submitOpenPlayPaymentProofAction
-      : submitPaymentProofAction;
+      : paymentKind === "sunday-unli"
+        ? submitSundayUnliPaymentProofAction
+        : submitPaymentProofAction;
   const [state, formAction, pending] = useActionState(
     submitAction,
     emptyBookingActionState,
@@ -96,7 +99,9 @@ export function ReceiptUploadForm({
         name={
           paymentKind === "open-play"
             ? "openPlayReference"
-            : "bookingReference"
+            : paymentKind === "sunday-unli"
+              ? "sundayUnliReference"
+              : "bookingReference"
         }
         value={reference}
       />

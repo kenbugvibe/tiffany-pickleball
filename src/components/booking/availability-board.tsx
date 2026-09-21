@@ -76,6 +76,11 @@ function getNextPath(row: AvailabilityRow, selectedDate: string) {
     return `/open-play?${params.toString()}`;
   }
 
+  if (row.availability_status === "sunday_unli" && row.entry_id) {
+    const params = new URLSearchParams({ session: row.entry_id });
+    return `/sunday-unli?${params.toString()}`;
+  }
+
   const params = new URLSearchParams({
     date: selectedDate,
     court: String(row.court_id),
@@ -143,7 +148,8 @@ function CourtStatus({
 }) {
   const interactive =
     row.availability_status === "available" ||
-    (row.availability_status === "open_play" && Boolean(row.entry_id));
+    (["open_play", "sunday_unli"].includes(row.availability_status) &&
+      Boolean(row.entry_id));
   const statusStyles: Record<AvailabilityStatus, string> = {
     available:
       "border-court-800/15 bg-white text-court-950 hover:border-gold-500 hover:shadow-[0_4px_14px_rgba(7,52,28,0.09)]",
@@ -395,11 +401,11 @@ export function AvailabilityBoard({
 
         <div className="mt-5 rounded-2xl border border-gold-500/40 bg-[#fbf1d4] p-4 text-sm leading-6 text-[#6b540c] sm:flex sm:items-center sm:justify-between sm:gap-5">
           <p>
-            Published open-play and Sunday-unli sessions appear in gold with
+            Published open-play and Sunday-unli sessions are highlighted with
             their per-person entry price.
           </p>
           <p className="mt-2 shrink-0 font-semibold text-court-800 sm:mt-0">
-            Tap open play to register
+            Tap a play event to register
           </p>
         </div>
       </div>

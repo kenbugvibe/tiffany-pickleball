@@ -1,6 +1,7 @@
 import {
   removeCourtBlockAction,
   removeOpenPlaySessionAction,
+  removeSundayUnliSessionAction,
 } from "@/actions/owner";
 import { manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerTimelineBooking } from "@/lib/data/owner";
@@ -96,6 +97,23 @@ export function CalendarDayGrid({
     }
 
     seenOpenPlaySessions.add(sessionId);
+    return true;
+  });
+  const seenSundayUnliSessions = new Set<string>();
+  const removableSundayUnli = bookings.filter((booking) => {
+    const sessionId = booking.sundayUnliSessionId;
+
+    if (
+      booking.kind !== "sunday_unli" ||
+      !sessionId ||
+      booking.sundayUnliStatus !== "published" ||
+      new Date(booking.endsAt).getTime() <= now ||
+      seenSundayUnliSessions.has(sessionId)
+    ) {
+      return false;
+    }
+
+    seenSundayUnliSessions.add(sessionId);
     return true;
   });
 
@@ -267,6 +285,84 @@ export function CalendarDayGrid({
                         />
                         Unpublish this event and reopen the court. Removal is
                         blocked if customers have already joined.
+                      </label>
+                      <button
+                        type="submit"
+                        className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
+                      >
+                        Confirm removal
+                      </button>
+                    </form>
+                  </details>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {removableSundayUnli.length > 0 ? (
+        <div className="border-b border-violet-100 bg-violet-50 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">
+            Manage Sunday Unli
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {removableSundayUnli.map((booking) => (
+              <article
+                key={booking.sundayUnliSessionId}
+                className="rounded-xl border border-violet-200 bg-white p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-ink-900">Sunday Unli Play</p>
+                    <p className="mt-1 text-xs text-ink-500">
+                      {bookings
+                        .filter(
+                          (candidate) =>
+                            candidate.sundayUnliSessionId ===
+                            booking.sundayUnliSessionId,
+                        )
+                        .map((candidate) => candidate.courtName)
+                        .join(", ")} ·{" "}
+                      {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
+                      {manilaTimeFormatter.format(new Date(booking.endsAt))}
+                      {booking.sundayUnliPrice
+                        ? ` · ₱${booking.sundayUnliPrice} per person`
+                        : ""}
+                    </p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
+                      {booking.sundayUnliReference ?? booking.reference}
+                    </p>
+                  </div>
+
+                  <details className="group sm:text-right">
+                    <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
+                      Remove event
+                    </summary>
+                    <form
+                      action={removeSundayUnliSessionAction}
+                      className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3 text-left"
+                    >
+                      <input
+                        type="hidden"
+                        name="sessionId"
+                        value={booking.sundayUnliSessionId ?? ""}
+                      />
+                      <input
+                        type="hidden"
+                        name="returnDate"
+                        value={selectedDay}
+                      />
+                      <label className="flex items-start gap-2 text-xs leading-5 text-red-900">
+                        <input
+                          type="checkbox"
+                          name="confirmed"
+                          value="yes"
+                          required
+                          className="mt-0.5 size-4 accent-red-700"
+                        />
+                        Remove this session and reopen all three courts.
+                        Removal is blocked if customers have already joined.
                       </label>
                       <button
                         type="submit"

@@ -10,6 +10,7 @@ const PROTECTED_PREFIXES = [
   "/bookings",
   "/my-bookings",
   "/open-play",
+  "/sunday-unli",
   "/owner",
   "/update-password",
 ];

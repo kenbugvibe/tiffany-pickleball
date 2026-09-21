@@ -20,6 +20,10 @@ import {
 } from "@/lib/open-play";
 import { requireOwner } from "@/lib/owner-auth";
 import { createClient } from "@/lib/supabase/server";
+import {
+  isSundayIsoDate,
+  sundayUnliReturnPath,
+} from "@/lib/sunday-unli";
 
 export async function reviewPaymentAction(formData: FormData) {
   await requireOwner();
@@ -376,5 +380,98 @@ export async function removeOpenPlaySessionAction(formData: FormData) {
 
   redirect(
     `${openPlayReturnPath(returnDate)}&removedOpenPlay=${encodeURIComponent(data)}`,
+  );
+}
+
+export async function createSundayUnliSessionAction(formData: FormData) {
+  await requireOwner();
+
+  const submittedDate = String(formData.get("sundayUnliDate") ?? "");
+  const returnDate = isIsoDate(submittedDate)
+    ? submittedDate
+    : getTodayInManila();
+  const customerNote = String(formData.get("customerNote") ?? "").trim();
+
+  if (!isSundayIsoDate(submittedDate) || customerNote.length > 500) {
+    redirect(`${sundayUnliReturnPath(returnDate)}&error=invalid-sunday-unli`);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_sunday_unli_session", {
+    p_session_date: submittedDate,
+    p_customer_note: customerNote || null,
+  });
+
+  if (error || !data || typeof data !== "object") {
+    console.error("[sunday-unli] publish failed", {
+      code: error?.code ?? null,
+      message: error?.message ?? "No result returned",
+      details: error?.details ?? null,
+      hint: error?.hint ?? null,
+    });
+    const message = error?.message.toLowerCase() ?? "";
+    const errorCode = message.includes("future sunday")
+      ? "sunday-unli-in-past"
+      : message.includes("no longer available")
+        ? "sunday-unli-conflict"
+        : "sunday-unli-publish-failed";
+    redirect(`${sundayUnliReturnPath(returnDate)}&error=${errorCode}`);
+  }
+
+  const result = data as { session_reference?: unknown };
+  const reference =
+    typeof result.session_reference === "string"
+      ? result.session_reference
+      : "created";
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+
+  redirect(
+    `${sundayUnliReturnPath(returnDate)}&publishedSundayUnli=${encodeURIComponent(reference)}`,
+  );
+}
+
+export async function removeSundayUnliSessionAction(formData: FormData) {
+  await requireOwner();
+
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const submittedDate = String(formData.get("returnDate") ?? "");
+  const returnDate = isIsoDate(submittedDate)
+    ? submittedDate
+    : getTodayInManila();
+
+  if (!UUID_PATTERN.test(sessionId)) {
+    redirect(
+      `${sundayUnliReturnPath(returnDate)}&error=invalid-remove-sunday-unli`,
+    );
+  }
+
+  if (formData.get("confirmed") !== "yes") {
+    redirect(
+      `${sundayUnliReturnPath(returnDate)}&error=remove-sunday-unli-confirmation-required`,
+    );
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("remove_sunday_unli_session", {
+    p_session_id: sessionId,
+  });
+
+  if (error || typeof data !== "string") {
+    const message = error?.message.toLowerCase() ?? "";
+    const errorCode = message.includes("active participants")
+      ? "sunday-unli-has-participants"
+      : "remove-sunday-unli-failed";
+    redirect(`${sundayUnliReturnPath(returnDate)}&error=${errorCode}`);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+
+  redirect(
+    `${sundayUnliReturnPath(returnDate)}&removedSundayUnli=${encodeURIComponent(data)}`,
   );
 }

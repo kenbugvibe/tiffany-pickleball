@@ -2,7 +2,7 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
-**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The owner Calendar now supports week/day views, multi-court blocking, and multi-court open-play publishing. Recurring bookings were removed from the product by decision on September 21, 2026. Customer open-play registration, receipt upload, and owner approval were completed and live-tested on September 21, 2026. Sunday-unli registration is the next customer-flow step.
+**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The owner Calendar now supports week/day views, multi-court blocking, and multi-court open-play publishing. Recurring bookings were removed from the product by decision on September 21, 2026. Customer open-play registration, receipt upload, and owner approval were completed and live-tested on September 21, 2026. Sunday-unli owner publishing, customer registration, receipt upload, owner approval, and customer confirmation were completed and live-tested on September 22, 2026.
 
 ## Planning checklist
 
@@ -233,7 +233,7 @@ Items marked **Confident** are supported by the build specification, reference d
 
 - **Confident —** Sunday unli play runs every Sunday from 7:00 PM–12:00 midnight, uses all three courts, and costs PHP 120 per player.
 - **Confident —** Customers register once for the entire five-hour Sunday unli period and do not select a court or individual hour.
-- **Guessing —** Sunday unli play has no participant cap; neither source defines one.
+- **Confident —** Sunday unli play has no participant cap in the initial version, confirmed on September 21, 2026.
 - **Confident —** Each Sunday unli participant uploads an individual GCash receipt for manual verification.
 
 ### Owner operations

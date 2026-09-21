@@ -29,6 +29,13 @@ type OpenPlayCourtRelation = {
   open_play_sessions: OneOrMany<OpenPlayRelation>;
 };
 
+type SundayUnliRelation = {
+  id: string;
+  reference: string;
+  price_per_player: number;
+  status: string;
+};
+
 type BookingRow = {
   id: string;
   reference: string;
@@ -43,6 +50,7 @@ type BookingRow = {
   customers: OneOrMany<CustomerRelation>;
   courts: OneOrMany<CourtRelation>;
   open_play_session_courts?: OneOrMany<OpenPlayCourtRelation>;
+  sunday_unli_sessions?: OneOrMany<SundayUnliRelation>;
 };
 
 type PaymentRow = {
@@ -86,6 +94,10 @@ export type OwnerTimelineBooking = {
   openPlayTitle: string | null;
   openPlayPrice: number | null;
   openPlayIsPublished: boolean;
+  sundayUnliSessionId: string | null;
+  sundayUnliReference: string | null;
+  sundayUnliPrice: number | null;
+  sundayUnliStatus: string | null;
 };
 
 export type OwnerPendingPayment = ReviewParent & {
@@ -307,7 +319,7 @@ export async function getOwnerTodayData() {
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published))",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status)",
       )
       .lt("starts_at", bounds.endIso)
       .gt("ends_at", bounds.startIso)
@@ -366,6 +378,7 @@ export async function getOwnerTodayData() {
     const court = one(booking.courts);
     const openPlayCourt = one(booking.open_play_session_courts ?? null);
     const openPlay = one(openPlayCourt?.open_play_sessions ?? null);
+    const sundayUnli = one(booking.sunday_unli_sessions ?? null);
 
     return {
       id: booking.id,
@@ -397,6 +410,12 @@ export async function getOwnerTodayData() {
       openPlayTitle: openPlay?.title ?? null,
       openPlayPrice: openPlay ? Number(openPlay.price_per_player) : null,
       openPlayIsPublished: openPlay?.is_published ?? false,
+      sundayUnliSessionId: sundayUnli?.id ?? null,
+      sundayUnliReference: sundayUnli?.reference ?? null,
+      sundayUnliPrice: sundayUnli
+        ? Number(sundayUnli.price_per_player)
+        : null,
+      sundayUnliStatus: sundayUnli?.status ?? null,
     } satisfies OwnerTimelineBooking;
   });
 
@@ -495,13 +514,15 @@ export async function getOwnerCalendarData(
       .order("id"),
     supabase
       .from("business_settings")
-      .select("opening_hour, closing_hour, open_play_price_per_player")
+      .select(
+        "opening_hour, closing_hour, open_play_price_per_player, sunday_unli_price",
+      )
       .eq("id", 1)
       .single(),
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published))",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status)",
       )
       .lt("starts_at", weekEnd.startIso)
       .gt("ends_at", weekBounds.startIso)
@@ -522,6 +543,7 @@ export async function getOwnerCalendarData(
     opening_hour: number;
     closing_hour: number;
     open_play_price_per_player: number;
+    sunday_unli_price: number;
   };
   const bookingRows = (bookingsResult.data ?? []) as unknown as BookingRow[];
   const minutesAvailablePerDay =
@@ -586,6 +608,7 @@ export async function getOwnerCalendarData(
       const court = one(booking.courts);
       const openPlayCourt = one(booking.open_play_session_courts ?? null);
       const openPlay = one(openPlayCourt?.open_play_sessions ?? null);
+      const sundayUnli = one(booking.sunday_unli_sessions ?? null);
 
       return {
         id: booking.id,
@@ -619,6 +642,12 @@ export async function getOwnerCalendarData(
         openPlayTitle: openPlay?.title ?? null,
         openPlayPrice: openPlay ? Number(openPlay.price_per_player) : null,
         openPlayIsPublished: openPlay?.is_published ?? false,
+        sundayUnliSessionId: sundayUnli?.id ?? null,
+        sundayUnliReference: sundayUnli?.reference ?? null,
+        sundayUnliPrice: sundayUnli
+          ? Number(sundayUnli.price_per_player)
+          : null,
+        sundayUnliStatus: sundayUnli?.status ?? null,
       } satisfies OwnerTimelineBooking;
     });
 
@@ -631,6 +660,7 @@ export async function getOwnerCalendarData(
     openingHour: settings.opening_hour,
     closingHour: settings.closing_hour,
     openPlayPricePerPlayer: settings.open_play_price_per_player,
+    sundayUnliPricePerPlayer: settings.sunday_unli_price,
     days,
     timeline,
   };
