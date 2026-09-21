@@ -3,21 +3,28 @@
 import { startTransition, useActionState, useEffect, useState } from "react";
 
 import { submitPaymentProofAction } from "@/actions/bookings";
+import { submitOpenPlayPaymentProofAction } from "@/actions/open-play";
 import { emptyBookingActionState } from "@/lib/booking-form-state";
 
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function ReceiptUploadForm({
-  bookingReference,
+  reference,
+  paymentKind = "booking",
   expiresAt,
   paymentConfigured,
 }: {
-  bookingReference: string;
+  reference: string;
+  paymentKind?: "booking" | "open-play";
   expiresAt: string;
   paymentConfigured: boolean;
 }) {
+  const submitAction =
+    paymentKind === "open-play"
+      ? submitOpenPlayPaymentProofAction
+      : submitPaymentProofAction;
   const [state, formAction, pending] = useActionState(
-    submitPaymentProofAction,
+    submitAction,
     emptyBookingActionState,
   );
   const [compressing, setCompressing] = useState(false);
@@ -84,7 +91,15 @@ export function ReceiptUploadForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <input type="hidden" name="bookingReference" value={bookingReference} />
+      <input
+        type="hidden"
+        name={
+          paymentKind === "open-play"
+            ? "openPlayReference"
+            : "bookingReference"
+        }
+        value={reference}
+      />
 
       <div>
         <label
@@ -127,21 +142,24 @@ export function ReceiptUploadForm({
         </p>
       </div>
 
-      <div>
-        <label
-          htmlFor="customerNote"
-          className="block text-sm font-semibold text-ink-900"
-        >
-          Note for Tiffany <span className="font-normal text-ink-500">(optional)</span>
-        </label>
-        <textarea
-          id="customerNote"
-          name="customerNote"
-          maxLength={500}
-          rows={3}
-          className="mt-1.5 block w-full resize-y rounded-xl border border-court-800/20 bg-white px-3 py-2.5 text-ink-900 outline-none focus:border-court-700 focus:ring-2 focus:ring-court-700/25"
-        />
-      </div>
+      {paymentKind === "booking" ? (
+        <div>
+          <label
+            htmlFor="customerNote"
+            className="block text-sm font-semibold text-ink-900"
+          >
+            Note for Tiffany{" "}
+            <span className="font-normal text-ink-500">(optional)</span>
+          </label>
+          <textarea
+            id="customerNote"
+            name="customerNote"
+            maxLength={500}
+            rows={3}
+            className="mt-1.5 block w-full resize-y rounded-xl border border-court-800/20 bg-white px-3 py-2.5 text-ink-900 outline-none focus:border-court-700 focus:ring-2 focus:ring-court-700/25"
+          />
+        </div>
+      ) : null}
 
       {error ? (
         <p

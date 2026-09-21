@@ -71,6 +71,11 @@ function signInHref(next: string) {
 }
 
 function getNextPath(row: AvailabilityRow, selectedDate: string) {
+  if (row.availability_status === "open_play" && row.entry_id) {
+    const params = new URLSearchParams({ session: row.entry_id });
+    return `/open-play?${params.toString()}`;
+  }
+
   const params = new URLSearchParams({
     date: selectedDate,
     court: String(row.court_id),
@@ -136,7 +141,9 @@ function CourtStatus({
   row: AvailabilityRow;
   selectedDate: string;
 }) {
-  const interactive = row.availability_status === "available";
+  const interactive =
+    row.availability_status === "available" ||
+    (row.availability_status === "open_play" && Boolean(row.entry_id));
   const statusStyles: Record<AvailabilityStatus, string> = {
     available:
       "border-court-800/15 bg-white text-court-950 hover:border-gold-500 hover:shadow-[0_4px_14px_rgba(7,52,28,0.09)]",
@@ -392,7 +399,7 @@ export function AvailabilityBoard({
             their per-person entry price.
           </p>
           <p className="mt-2 shrink-0 font-semibold text-court-800 sm:mt-0">
-            Online registration coming later
+            Tap open play to register
           </p>
         </div>
       </div>

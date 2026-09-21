@@ -3,38 +3,35 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { BookingShell } from "@/components/booking/booking-shell";
 import { HoldCountdown } from "@/components/booking/hold-countdown";
+import { OpenPlayShell } from "@/components/booking/open-play-shell";
 import { ReceiptUploadForm } from "@/components/booking/receipt-upload-form";
-import { getCustomerBooking } from "@/lib/data/bookings";
-import {
-  manilaScheduleFormatter,
-  manilaTimeFormatter,
-} from "@/lib/dates";
+import { getCustomerOpenPlaySignup } from "@/lib/data/open-play";
+import { manilaScheduleFormatter, manilaTimeFormatter } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
 
 export const metadata: Metadata = {
-  title: "Pay through GCash",
+  title: "Pay for open play",
 };
 
-export default async function BookingPaymentPage({
+export default async function OpenPlayPaymentPage({
   params,
 }: {
   params: Promise<{ reference: string }>;
 }) {
   const { reference } = await params;
-  const booking = await getCustomerBooking(reference);
+  const signup = await getCustomerOpenPlaySignup(reference);
 
-  if (!booking) {
+  if (!signup) {
     notFound();
   }
 
-  if (booking.payment) {
-    redirect(`/book/confirmation/${encodeURIComponent(reference)}`);
+  if (signup.payment) {
+    redirect(`/open-play/confirmation/${encodeURIComponent(reference)}`);
   }
 
-  const expiresAt = booking.hold_expires_at;
-  const expired = booking.status !== "pending" || !expiresAt;
+  const expiresAt = signup.holdExpiresAt;
+  const expired = signup.status !== "pending" || !expiresAt;
   const gcashName = process.env.GCASH_ACCOUNT_NAME?.trim() ?? "";
   const gcashNumber = process.env.GCASH_MOBILE_NUMBER?.trim() ?? "";
   const configuredQrPath = process.env.GCASH_QR_IMAGE_PATH?.trim() ?? "";
@@ -45,19 +42,17 @@ export default async function BookingPaymentPage({
   const paymentConfigured = Boolean(gcashName && gcashNumber);
 
   return (
-    <BookingShell currentStep={5}>
+    <OpenPlayShell>
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
-          {expiresAt ? (
-            <HoldCountdown expiresAt={expiresAt} />
-          ) : null}
+          {expiresAt ? <HoldCountdown expiresAt={expiresAt} /> : null}
 
           <section className="rounded-2xl border border-court-800/10 bg-white p-5 shadow-[0_8px_30px_rgba(7,52,28,.06)] sm:p-7">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-court-700">
-              Step 4 · Pay through GCash
+              Pay through GCash
             </p>
             <h1 className="mt-2 font-display text-3xl font-bold text-ink-900">
-              Send {formatPeso(booking.total_amount)}
+              Send {formatPeso(signup.amountDue)}
             </h1>
 
             {qrPath ? (
@@ -96,29 +91,32 @@ export default async function BookingPaymentPage({
             <ol className="mt-5 list-decimal space-y-2 pl-5 text-sm leading-6 text-ink-500">
               <li>Send the exact amount shown above.</li>
               <li>Save or screenshot the successful GCash receipt.</li>
-              <li>Enter its reference number and upload it before the hold ends.</li>
+              <li>Upload it before the payment hold ends.</li>
             </ol>
           </section>
 
           <section className="rounded-2xl border border-court-800/10 bg-white p-5 text-sm sm:p-6">
             <p className="font-display text-lg font-bold text-ink-900">
-              {booking.court_name}
+              {signup.session.title}
             </p>
             <p className="mt-1 text-ink-500">
-              {manilaScheduleFormatter.format(new Date(booking.starts_at))}–
-              {manilaTimeFormatter.format(new Date(booking.ends_at))}
+              {manilaScheduleFormatter.format(
+                new Date(signup.session.startsAt),
+              )}
+              –
+              {manilaTimeFormatter.format(new Date(signup.session.endsAt))}
             </p>
             <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-court-800/10 pt-4">
               <div>
-                <dt className="text-ink-500">Paddles</dt>
+                <dt className="text-ink-500">Courts</dt>
                 <dd className="mt-1 font-bold text-ink-900">
-                  {booking.paddle_count}
+                  {signup.session.courtNames.join(", ")}
                 </dd>
               </div>
               <div>
                 <dt className="text-ink-500">Reference</dt>
                 <dd className="mt-1 font-mono font-bold text-ink-900">
-                  {booking.reference}
+                  {signup.reference}
                 </dd>
               </div>
             </dl>
@@ -127,30 +125,32 @@ export default async function BookingPaymentPage({
 
         <section className="h-fit rounded-2xl border border-court-800/10 bg-white p-5 shadow-[0_8px_30px_rgba(7,52,28,.06)] sm:p-7">
           <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-court-700">
-            Step 5 · Upload proof
+            Upload proof
           </p>
           <h2 className="mt-2 font-display text-3xl font-bold text-ink-900">
             Send your receipt
           </h2>
           <p className="mt-2 text-sm leading-6 text-ink-500">
-            Your booking remains pending until Tiffany verifies the payment.
+            Your registration remains pending until Tiffany verifies the
+            payment.
           </p>
 
           <div className="mt-6">
             {expired || !expiresAt ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p className="font-bold">This payment hold has expired.</p>
-                <p className="mt-1">Choose an available court time again.</p>
+                <p className="mt-1">Return to the event and register again.</p>
                 <Link
-                  href="/#availability"
+                  href={`/open-play?session=${encodeURIComponent(signup.sessionId)}`}
                   className="mt-3 inline-flex min-h-11 items-center font-bold underline underline-offset-2"
                 >
-                  Return to availability
+                  Return to open play
                 </Link>
               </div>
             ) : (
               <ReceiptUploadForm
-                reference={booking.reference}
+                reference={signup.reference}
+                paymentKind="open-play"
                 expiresAt={expiresAt}
                 paymentConfigured={paymentConfigured}
               />
@@ -158,6 +158,6 @@ export default async function BookingPaymentPage({
           </div>
         </section>
       </div>
-    </BookingShell>
+    </OpenPlayShell>
   );
 }

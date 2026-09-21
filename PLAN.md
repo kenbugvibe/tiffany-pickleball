@@ -2,7 +2,7 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
-**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The read-only owner Calendar foundation was completed and visually verified on September 17, 2026, including week navigation, day selection, daily occupancy, and the hour-by-court grid. The next Calendar steps are court blocking, open-play publishing, and recurring-booking controls.
+**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The owner Calendar now supports week/day views, multi-court blocking, and multi-court open-play publishing. Recurring bookings were removed from the product by decision on September 21, 2026. Customer open-play registration, receipt upload, and owner approval were completed and live-tested on September 21, 2026. Sunday-unli registration is the next customer-flow step.
 
 ## Planning checklist
 
@@ -134,10 +134,10 @@ When Tiffany blocks a period containing existing bookings, the system must:
 6. Mark verified payments as `refund_pending`.
 7. Let Tiffany manually return the money and mark each payment as `refunded`.
 
-#### Recurring-booking conflicts
+#### Recurring bookings
 
-- An existing reservation wins when a generated recurring occurrence would overlap it.
-- Skip only the conflicting recurring occurrence and alert Tiffany.
+- Recurring bookings are removed from the product.
+- Do not add recurring-booking controls, automatic generation, or recurring cron jobs.
 
 #### Customer and booking identifiers
 
@@ -244,9 +244,7 @@ Items marked **Confident** are supported by the build specification, reference d
 - **Confident —** The full booking table, filters, and CSV export live on Money, while the short receipt-verification queue remains on Today.
 - **Confident —** Tiffany can block an occupied period. The system first shows affected bookings and asks for confirmation, then emails the customers, cancels the bookings, creates the block, and marks verified payments as refund pending until Tiffany manually completes each refund.
 - **Confident —** The alternative horizontal lanes and drag-to-move/resize behavior are excluded initially and may be considered later.
-- **Confident —** Walk-in bookings and the walk-in UI are removed. Tiffany can publish open play, block courts, and manage recurring bookings.
-- **Confident —** Recurring rules materialize the next eight weeks of court bookings.
-- **Confident —** When a recurring occurrence conflicts with an existing booking, the existing booking wins, that occurrence is skipped, and Tiffany is alerted.
+- **Confident —** Walk-in bookings and recurring bookings are removed. Tiffany can publish open play and block courts.
 
 ### Notifications
 
@@ -275,7 +273,7 @@ Items marked **Confident** are supported by the build specification, reference d
 - **Guessing —** Receipt files are stored privately and opened by Tiffany through short-lived signed URLs. The specification requires storage but does not define access rules.
 - **Confident —** Row-level security applies to every table, and public availability exposes no customer identity.
 - **Confident —** Owner authorization uses a dedicated `admin_users` table and a secure RLS helper instead of a JWT `app_metadata` role flag.
-- **Guessing —** Expired holds and recurring-booking generation run frequently enough through Vercel Cron to keep availability current; the exact schedules are not yet defined.
+- **Guessing —** Expired holds run frequently enough through Vercel Cron to keep availability current; the exact schedule is not yet defined.
 
 ## Step 4 — What is needed before Phase 1
 
@@ -290,7 +288,7 @@ Phase 1 creates and tests the database. The items below are divided into true Ph
 - [x] **Rejected receipt behavior:** Rejection cancels and releases the reservation immediately and emails the customer.
 - [x] **Court-blocking transaction:** Show affected bookings, confirm, email customers, cancel bookings, create the block, and track manual refunds through refund-pending and refunded states.
 - [x] **Walk-ins:** Remove walk-in bookings and their payment workflow entirely.
-- [x] **Recurring-booking conflicts:** Keep the existing reservation, skip the conflicting occurrence, and alert Tiffany.
+- [x] **Recurring bookings:** Removed from the approved product scope on September 21, 2026.
 - [x] **Public booking reference:** Use `TPC-YYMM-####`.
 - [x] **Required profile fields:** Require full name, email address, and Philippine mobile number.
 
@@ -380,7 +378,6 @@ tiffany-pickleball/
 │   │   │   └── money/page.tsx
 │   │   └── api/
 │   │       ├── cron/expire-holds/route.ts
-│   │       ├── cron/materialize-recurring/route.ts
 │   │       └── exports/bookings/route.ts
 │   ├── actions/
 │   │   ├── bookings.ts
@@ -438,7 +435,7 @@ tiffany-pickleball/
 - `src/app/(customer)/sunday-unli/` — Sunday 7:00 PM–12:00 midnight PHP 120 registration flow.
 - `src/app/(customer)/my-bookings/` — A customer's own upcoming and past reservations.
 - `src/app/owner/` — Protected owner console; the proposed routes follow Today, Calendar, and Money.
-- `src/app/api/cron/` — Authenticated Vercel Cron endpoints for expired holds and recurring-booking generation.
+- `src/app/api/cron/` — Authenticated Vercel Cron endpoints for expired payment holds.
 - `src/app/api/exports/` — Server-generated CSV downloads for the Money screen.
 - `src/actions/` — Server Actions for UI-triggered booking, open-play, payment-review, blocking, refund, and owner mutations.
 - `src/components/booking/` — Customer booking-step components and availability controls.
@@ -456,7 +453,7 @@ tiffany-pickleball/
 - `public/courts/` — Optimized public court photographs.
 - `supabase/migrations/` — Versioned SQL schema changes, beginning with Phase 1.
 - `supabase/seed.sql` — Fictitious local/development sample data only.
-- `supabase/tests/` — SQL tests for overlap prevention, RLS, revenue, holds, and recurring conflicts.
+- `supabase/tests/` — SQL tests for overlap prevention, RLS, revenue, and payment holds.
 - `tests/unit/` — Focused tests for pricing, dates, validation, and other pure rules.
 - `tests/e2e/` — Browser tests for complete customer and owner workflows.
 - `.env.example` — Environment-variable names with no real keys or personal data.
