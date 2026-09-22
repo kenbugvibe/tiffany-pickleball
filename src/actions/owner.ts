@@ -46,7 +46,55 @@ export async function reviewPaymentAction(formData: FormData) {
   }
 
   revalidatePath("/owner/today");
+  revalidatePath("/owner/money");
   redirect(`/owner/today?reviewed=${decision === "approve" ? "approved" : "rejected"}`);
+}
+
+function moneyResultPath(
+  rawReturnTo: string,
+  result: { refunded?: string; error?: string },
+) {
+  const safeReturnTo =
+    rawReturnTo === "/owner/money" ||
+    (rawReturnTo.startsWith("/owner/money?") && rawReturnTo.length <= 1000)
+      ? rawReturnTo
+      : "/owner/money";
+  const [, rawQuery = ""] = safeReturnTo.split("?", 2);
+  const params = new URLSearchParams(rawQuery);
+
+  params.delete("refunded");
+  params.delete("error");
+
+  if (result.refunded) params.set("refunded", result.refunded);
+  if (result.error) params.set("error", result.error);
+
+  const query = params.toString();
+  return query ? `/owner/money?${query}` : "/owner/money";
+}
+
+export async function markPaymentRefundedAction(formData: FormData) {
+  await requireOwner();
+
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const returnTo = String(formData.get("returnTo") ?? "/owner/money");
+
+  if (!UUID_PATTERN.test(paymentId)) {
+    redirect(moneyResultPath(returnTo, { error: "invalid-refund" }));
+  }
+
+  const supabase = await createClient();
+  const { data: reference, error } = await supabase.rpc(
+    "mark_payment_refunded",
+    { p_payment_id: paymentId },
+  );
+
+  if (error || typeof reference !== "string") {
+    redirect(moneyResultPath(returnTo, { error: "refund-failed" }));
+  }
+
+  revalidatePath("/owner/money");
+  revalidatePath("/owner/today");
+  redirect(moneyResultPath(returnTo, { refunded: reference }));
 }
 
 function blockPreviewPath(
@@ -235,6 +283,7 @@ export async function createCourtBlockAction(formData: FormData) {
 
   revalidatePath("/owner/calendar");
   revalidatePath("/owner/today");
+  revalidatePath("/owner/money");
 
   const successParams = new URLSearchParams({
     blocked: blockReference,
