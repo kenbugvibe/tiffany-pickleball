@@ -10,6 +10,57 @@ export const metadata: Metadata = {
   title: "Booking received",
 };
 
+function confirmationState(bookingStatus: string, paymentStatus: string) {
+  if (paymentStatus === "refunded") {
+    return {
+      eyebrow: "Refund completed",
+      headline: "Your booking was refunded.",
+      description: "Tiffany marked the GCash refund as completed.",
+      label: "Refunded",
+      statusClass: "text-sky-700",
+    };
+  }
+
+  if (paymentStatus === "refund_pending") {
+    return {
+      eyebrow: "Refund in progress",
+      headline: "Your booking was cancelled.",
+      description: "Tiffany is preparing the return of your verified payment.",
+      label: "Refund pending",
+      statusClass: "text-orange-700",
+    };
+  }
+
+  if (bookingStatus === "confirmed" && paymentStatus === "verified") {
+    return {
+      eyebrow: "Booking confirmed",
+      headline: "Your court is confirmed.",
+      description: "Tiffany verified your payment. Your court is ready for you.",
+      label: "Confirmed",
+      statusClass: "text-emerald-700",
+    };
+  }
+
+  if (bookingStatus === "cancelled" || paymentStatus === "rejected") {
+    return {
+      eyebrow: "Booking cancelled",
+      headline: "This booking is no longer active.",
+      description: "The reservation was cancelled or its payment was rejected.",
+      label: "Cancelled",
+      statusClass: "text-red-700",
+    };
+  }
+
+  return {
+    eyebrow: "Payment proof received",
+    headline: "Your court is reserved.",
+    description:
+      "Tiffany will verify your GCash receipt. The booking remains pending until it is approved.",
+    label: "Pending verification",
+    statusClass: "text-[#8a6810]",
+  };
+}
+
 export default async function BookingConfirmationPage({
   params,
 }: {
@@ -25,6 +76,8 @@ export default async function BookingConfirmationPage({
   if (!booking.payment) {
     redirect(`/book/payment/${encodeURIComponent(reference)}`);
   }
+
+  const state = confirmationState(booking.status, booking.payment.status);
 
   return (
     <main className="min-h-screen bg-court-950 px-4 py-8 sm:py-12">
@@ -45,14 +98,13 @@ export default async function BookingConfirmationPage({
               ✓
             </span>
             <p className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-gold-200">
-              Payment proof received
+              {state.eyebrow}
             </p>
             <h1 className="mt-2 font-display text-4xl font-bold">
-              Your court is reserved.
+              {state.headline}
             </h1>
             <p className="mt-3 text-sm leading-6 text-white/70">
-              Tiffany will verify your GCash receipt. The booking remains pending
-              until it is approved.
+              {state.description}
             </p>
           </div>
 
@@ -100,8 +152,8 @@ export default async function BookingConfirmationPage({
               </div>
               <div className="grid grid-cols-[110px_1fr] gap-3 py-4 text-sm">
                 <dt className="text-ink-500">Status</dt>
-                <dd className="text-right font-bold text-[#8a6810]">
-                  Pending verification
+                <dd className={`text-right font-bold ${state.statusClass}`}>
+                  {state.label}
                 </dd>
               </div>
             </dl>
@@ -115,12 +167,20 @@ export default async function BookingConfirmationPage({
               </div>
             ) : null}
 
-            <Link
-              href="/#availability"
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white hover:bg-court-700"
-            >
-              Book another court
-            </Link>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/my-bookings"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-court-800/20 bg-white px-5 font-bold text-court-800 hover:bg-court-800/5"
+              >
+                View my bookings
+              </Link>
+              <Link
+                href="/#availability"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white hover:bg-court-700"
+              >
+                Book another court
+              </Link>
+            </div>
           </div>
         </section>
       </div>

@@ -125,12 +125,20 @@ export default async function OpenPlayConfirmationPage({
               </div>
             </dl>
 
-            <Link
-              href="/#availability"
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white hover:bg-court-700"
-            >
-              Return to availability
-            </Link>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/my-bookings"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-court-800/20 bg-white px-5 font-bold text-court-800 hover:bg-court-800/5"
+              >
+                View my bookings
+              </Link>
+              <Link
+                href="/#availability"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white hover:bg-court-700"
+              >
+                Return to availability
+              </Link>
+            </div>
           </div>
         </section>
       </div>

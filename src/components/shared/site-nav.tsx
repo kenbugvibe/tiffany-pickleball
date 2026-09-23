@@ -11,21 +11,29 @@ export async function SiteNav() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: isAdmin } = user
-    ? await supabase.rpc("is_admin")
-    : { data: false };
+  const [{ data: isAdmin }, { data: customerId }] = user
+    ? await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("current_customer_id"),
+      ])
+    : [{ data: false }, { data: null }];
 
   return (
     <nav
       className="flex items-center gap-2 sm:gap-6"
       aria-label="Main navigation"
     >
-      <Link href="#availability" className={`hidden sm:block ${linkClass}`}>
+      <Link href="/#availability" className={`hidden sm:block ${linkClass}`}>
         Availability
       </Link>
 
       {user ? (
         <>
+          {customerId ? (
+            <Link href="/my-bookings" className={linkClass}>
+              My bookings
+            </Link>
+          ) : null}
           {isAdmin ? (
             <Link
               href="/owner/today"
