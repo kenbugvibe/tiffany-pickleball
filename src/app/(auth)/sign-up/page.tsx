@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignUpForm } from "@/components/shared/sign-up-form";
+import { SocialAuthButtons } from "@/components/shared/social-auth-buttons";
 import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,14 +12,20 @@ export const metadata: Metadata = {
 };
 
 type SignUpPageProps = {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{
+    next?: string | string[];
+    error?: string | string[];
+  }>;
 };
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
-  const rawNext = (await searchParams).next;
+  const params = await searchParams;
+  const rawNext = params.next;
   const next = safeRedirectPath(
     Array.isArray(rawNext) ? rawNext[0] : rawNext,
   );
+  const rawError = params.error;
+  const error = Array.isArray(rawError) ? rawError[0] : rawError;
 
   const supabase = await createClient();
   const {
@@ -26,8 +33,30 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect(next);
+    const [{ data: customerId }, { data: isAdmin }] = await Promise.all([
+      supabase.rpc("current_customer_id"),
+      supabase.rpc("is_admin"),
+    ]);
+
+    if (isAdmin) {
+      redirect("/owner/today");
+    }
+
+    redirect(
+      customerId
+        ? next
+        : `/complete-profile?next=${encodeURIComponent(next)}`,
+    );
   }
+
+  const oauthError =
+    error === "owner-social-unlinked"
+      ? "That social login was disconnected from the owner. Move the owner account to a dedicated email, then try this social account again to create a customer account."
+      : error === "owner-social-conflict"
+        ? "That social account uses the owner's email and cannot become a separate customer account. Enable Manual Linking in Supabase so it can be disconnected, or use a different social email."
+      : error === "oauth-failed"
+        ? "Google or Facebook account creation could not be completed. Please try again."
+        : null;
 
   return (
     <>
@@ -35,10 +64,16 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         Create your account
       </h1>
       <p className="mt-1.5 text-sm text-ink-500">
-        You need an account before reserving a court.
+        Continue with Google or Facebook, or create an account with email.
       </p>
 
       <div className="mt-6">
+        <SocialAuthButtons
+          next={next}
+          authPage="sign-up"
+          error={oauthError}
+          emailLabel="or create with email"
+        />
         <SignUpForm next={next} />
       </div>
 

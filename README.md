@@ -74,6 +74,33 @@ Both rows should return with `active = true`.
    refund marking, Money filters, and CSV export.
 8. Promote the verified preview to production and inspect runtime logs.
 
+### Google and Facebook sign-in
+
+Social provider credentials belong in Supabase Auth, not in Vercel environment
+variables or this repository.
+
+For Google, create a Web OAuth client in Google Auth Platform, add the website
+origin under Authorized JavaScript origins, and add the Supabase provider
+callback shown under Supabase **Authentication > Sign In / Providers > Google**
+as an Authorized redirect URI. Add the Google client ID and secret to that
+Supabase provider and enable it.
+
+For Facebook, create a Meta developer app with Facebook Login, enable the email
+permission, and add the Supabase provider callback shown under Supabase
+**Authentication > Sign In / Providers > Facebook** as a Valid OAuth Redirect
+URI. Add the Facebook App ID and secret to Supabase and enable the provider.
+
+Both providers use the Supabase callback URL, which has this shape:
+`https://<project-ref>.supabase.co/auth/v1/callback`. The app then returns users
+to `/auth/confirm`, exchanges the PKCE code, and asks first-time social users for
+the Philippine mobile number required for bookings.
+
+Use a dedicated email address for the owner account. Supabase automatically
+links OAuth identities that share a verified email, so an owner email must not
+also be used for a customer social login. Enable **Manual Linking** in Supabase
+Auth settings so the callback can safely detach an accidentally linked Google
+or Facebook identity before signing that browser session out.
+
 Do not store API keys, SMTP passwords, database passwords, or owner passwords in
 Git. `.env.local` and other local environment files are ignored.
 

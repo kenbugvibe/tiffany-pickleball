@@ -157,9 +157,140 @@ export async function signInAction(
     return failure({}, "That email and password combination did not work.");
   }
 
-  await ensureCustomerProfile();
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+
+  if (isAdmin) {
+    redirect("/owner/today");
+  }
+
+  const customerId = await ensureCustomerProfile();
+
+  if (!customerId) {
+    const next = safeRedirectPath(formData.get("next"));
+    redirect(`/complete-profile?next=${encodeURIComponent(next)}`);
+  }
 
   redirect(safeRedirectPath(formData.get("next")));
+}
+
+export async function signInWithOAuthAction(formData: FormData) {
+  const providerValue = String(formData.get("provider") ?? "");
+  const next = safeRedirectPath(formData.get("next"));
+  const authPage =
+    formData.get("authPage") === "sign-up" ? "/sign-up" : "/sign-in";
+  const errorPath = `${authPage}?error=oauth-failed&next=${encodeURIComponent(next)}`;
+
+  if (providerValue !== "google" && providerValue !== "facebook") {
+    redirect(errorPath);
+  }
+
+  const origin = await getOrigin();
+  const callbackUrl = new URL("/auth/confirm", origin);
+  callbackUrl.searchParams.set("flow", "oauth");
+  callbackUrl.searchParams.set("next", next);
+  callbackUrl.searchParams.set("provider", providerValue);
+  callbackUrl.searchParams.set(
+    "authPage",
+    authPage === "/sign-up" ? "sign-up" : "sign-in",
+  );
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: providerValue,
+    options: {
+      redirectTo: callbackUrl.toString(),
+    },
+  });
+
+  if (error || !data.url) {
+    redirect(errorPath);
+  }
+
+  redirect(data.url);
+}
+
+export async function completeCustomerProfileAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const fullName = String(formData.get("fullName") ?? "");
+  const phone = String(formData.get("phone") ?? "");
+  const next = safeRedirectPath(formData.get("next"));
+  const fieldErrors: FieldErrors = {};
+  const nameError = validateFullName(fullName);
+  const phoneError = validatePhone(phone);
+
+  if (nameError) fieldErrors.fullName = nameError;
+  if (phoneError) fieldErrors.phone = phoneError;
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return failure(fieldErrors);
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/sign-in?next=${encodeURIComponent(next)}`);
+  }
+
+  if (!user.email) {
+    return failure(
+      {},
+      "Your Google or Facebook account did not share an email address. Sign out and allow email access before trying again.",
+    );
+  }
+
+  const [{ data: isAdmin }, { data: existingCustomer }] = await Promise.all([
+    supabase.rpc("is_admin"),
+    supabase
+      .from("customers")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  if (isAdmin) {
+    redirect("/owner/today");
+  }
+
+  if (existingCustomer) {
+    redirect(next);
+  }
+
+  const normalizedPhone = normalizePhPhone(phone);
+
+  if (!normalizedPhone) {
+    return failure({ phone: "Enter a valid Philippine mobile number." });
+  }
+
+  const { error: profileError } = await supabase.from("customers").insert({
+    auth_user_id: user.id,
+    full_name: fullName.trim(),
+    phone: normalizedPhone,
+    email: user.email.toLowerCase(),
+    is_coach: false,
+  });
+
+  if (profileError) {
+    return failure(
+      {},
+      "Your customer profile could not be saved. Please try again.",
+    );
+  }
+
+  // Keep the normalized customer fields in Auth metadata as a repair fallback.
+  await supabase.auth.updateUser({
+    data: {
+      account_type: "customer",
+      full_name: fullName.trim(),
+      phone: normalizedPhone,
+    },
+  });
+
+  redirect(next);
 }
 
 export async function signOutAction() {

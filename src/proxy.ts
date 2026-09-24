@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_PREFIXES = [
   "/book",
   "/bookings",
+  "/complete-profile",
   "/my-bookings",
   "/open-play",
   "/sunday-unli",
