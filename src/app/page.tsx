@@ -6,6 +6,7 @@ import {
   COURT_REGION_SHORT,
   CourtLocation,
 } from "@/components/shared/court-location";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { SiteNav } from "@/components/shared/site-nav";
 import {
   getAvailabilityForDays,
@@ -133,12 +134,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             className="flex items-center gap-3"
             aria-label="Tiffany's Pickleball Court home"
           >
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full border border-gold-200/40 bg-court-800 font-mono text-xs font-semibold text-gold-200"
-            >
-              TP
-            </span>
+            <BrandMark />
             <span>
               <span className="block font-display text-base font-bold leading-none tracking-wide text-gold-200 sm:text-lg">
                 TIFFANY&apos;S
@@ -222,6 +218,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Tiffany&apos;s Pickleball Court
           </p>
           <p>{COURT_ADDRESS}</p>
+          <p className="flex gap-4">
+            <Link href="/privacy" className="hover:text-ink-900">
+              Privacy
+            </Link>
+            <Link href="/data-deletion" className="hover:text-ink-900">
+              Data deletion
+            </Link>
+          </p>
         </div>
       </footer>
     </main>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { MyBookingCard } from "@/components/booking/my-booking-card";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { SiteNav } from "@/components/shared/site-nav";
 import {
   getMyBookingsData,
@@ -81,12 +82,7 @@ export default async function MyBookingsPage() {
             className="flex items-center gap-3"
             aria-label="Tiffany's Pickleball Court home"
           >
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full border border-gold-200/40 bg-court-800 font-mono text-xs font-semibold text-gold-200"
-            >
-              TP
-            </span>
+            <BrandMark />
             <span>
               <span className="block font-display text-base font-bold leading-none tracking-wide text-gold-200 sm:text-lg">
                 TIFFANY&apos;S

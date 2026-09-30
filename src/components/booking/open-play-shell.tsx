@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/shared/brand-mark";
+
 export function OpenPlayShell({
   children,
 }: Readonly<{
@@ -10,12 +12,7 @@ export function OpenPlayShell({
       <header className="border-b border-white/10 bg-court-950 text-white">
         <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full border border-gold-200/40 bg-court-800 font-mono text-xs font-semibold text-gold-200"
-            >
-              TP
-            </span>
+            <BrandMark />
             <span className="font-display font-bold text-gold-200">
               TIFFANY&apos;S
             </span>

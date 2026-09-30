@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/shared/brand-mark";
+
 export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -11,12 +13,7 @@ export default function AuthLayout({
           className="mb-7 flex items-center gap-3 self-start"
           aria-label="Tiffany's Pickleball Court home"
         >
-          <span
-            aria-hidden="true"
-            className="grid size-10 place-items-center rounded-full border border-gold-200/40 bg-court-800 font-mono text-xs font-semibold text-gold-200"
-          >
-            TP
-          </span>
+          <BrandMark className="size-16" />
           <span>
             <span className="block font-display text-base font-bold leading-none tracking-wide text-gold-200">
               TIFFANY&apos;S

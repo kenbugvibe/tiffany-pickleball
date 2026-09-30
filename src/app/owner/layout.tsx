@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { signOutAction } from "@/actions/auth";
 import { OwnerNav } from "@/components/owner/owner-nav";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { requireOwner } from "@/lib/owner-auth";
 
 export const metadata: Metadata = {
@@ -23,12 +24,7 @@ export default async function OwnerLayout({
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center justify-between gap-4">
             <Link href="/owner/today" className="flex items-center gap-3">
-              <span
-                aria-hidden="true"
-                className="grid size-10 place-items-center rounded-full border border-gold-200/40 bg-court-800 font-mono text-xs font-semibold text-gold-200"
-              >
-                TP
-              </span>
+              <BrandMark />
               <span>
                 <span className="block font-display text-lg font-bold leading-none text-gold-200">
                   TIFFANY&apos;S
