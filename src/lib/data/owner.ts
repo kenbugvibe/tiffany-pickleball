@@ -51,6 +51,7 @@ type BookingRow = {
   courts: OneOrMany<CourtRelation>;
   open_play_session_courts?: OneOrMany<OpenPlayCourtRelation>;
   sunday_unli_sessions?: OneOrMany<SundayUnliRelation>;
+  payments?: OneOrMany<{ id: string; status: string }>;
 };
 
 type PaymentRow = {
@@ -117,6 +118,8 @@ export type OwnerUpcomingBooking = {
   customerName: string;
   status: string;
   amount: number;
+  paymentId: string | null;
+  paymentStatus: string | null;
 };
 
 export type OwnerCalendarDaySummary = {
@@ -333,12 +336,11 @@ export async function getOwnerTodayData() {
         { count: "exact" },
       )
       .eq("status", "unverified")
-      .order("created_at")
-      .limit(6),
+      .order("created_at"),
     supabase
       .from("bookings")
       .select(
-        "id, reference, starts_at, ends_at, status, total_amount, customers(full_name, phone, email), courts(name)",
+        "id, reference, starts_at, ends_at, status, total_amount, customers(full_name, phone, email), courts(name), payments(id, status)",
       )
       .in("kind", ["regular", "recurring"])
       .not("status", "in", "(cancelled,no_show)")
@@ -461,6 +463,7 @@ export async function getOwnerTodayData() {
   const upcoming = upcomingRows.map((booking) => {
     const customer = one(booking.customers);
     const court = one(booking.courts);
+    const payment = one(booking.payments ?? null);
 
     return {
       id: booking.id,
@@ -471,6 +474,8 @@ export async function getOwnerTodayData() {
       customerName: customer?.full_name ?? "Customer",
       status: booking.status,
       amount: booking.total_amount,
+      paymentId: payment?.id ?? null,
+      paymentStatus: payment?.status ?? null,
     } satisfies OwnerUpcomingBooking;
   });
 

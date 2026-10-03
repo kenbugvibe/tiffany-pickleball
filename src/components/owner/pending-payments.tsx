@@ -38,7 +38,11 @@ export function PendingPayments({
       ) : (
         <div className="divide-y divide-court-800/10">
           {payments.map((payment) => (
-            <article key={payment.id} className="grid gap-4 px-5 py-5 lg:grid-cols-[1fr_180px]">
+            <article
+              key={payment.id}
+              id={`payment-${payment.id}`}
+              className="grid scroll-mt-6 gap-4 px-5 py-5 target:bg-amber-50 lg:grid-cols-[1fr_180px]"
+            >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-display text-lg font-bold text-ink-900">

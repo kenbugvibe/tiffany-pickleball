@@ -54,6 +54,22 @@ export function UpcomingBookings({
               <p className="mt-3 text-sm text-ink-500">
                 {manilaScheduleFormatter.format(new Date(booking.startsAt))}
               </p>
+              {booking.status === "pending" ? (
+                booking.paymentStatus === "unverified" && booking.paymentId ? (
+                  <a
+                    href={`#payment-${booking.paymentId}`}
+                    className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-amber-100 px-3 text-xs font-bold text-amber-900 transition hover:bg-amber-200"
+                  >
+                    Receipt uploaded · Review now
+                  </a>
+                ) : (
+                  <p className="mt-2 text-xs font-semibold text-ink-500">
+                    {booking.paymentStatus === "rejected"
+                      ? "Receipt rejected"
+                      : "Waiting for the customer's receipt"}
+                  </p>
+                )
+              ) : null}
               <div className="mt-1 flex items-center justify-between gap-3">
                 <p className="text-sm font-bold text-ink-900">
                   {formatPeso(booking.amount)}
