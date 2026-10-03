@@ -2,8 +2,8 @@ import {
   removeCourtBlockAction,
   removeOpenPlaySessionAction,
   removeSundayUnliSessionAction,
-  rescheduleBookingAction,
 } from "@/actions/owner";
+import { RescheduleBookingForm } from "@/components/owner/reschedule-booking-form";
 import { manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerTimelineBooking } from "@/lib/data/owner";
 
@@ -236,121 +236,39 @@ export function CalendarDayGrid({
             Manage customer bookings
           </p>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            {reschedulableBookings.map((booking) => {
-              const startHour = Math.floor(booking.startMinute / 60);
-              const durationHours = Math.round(
-                (booking.endMinute - booking.startMinute) / 60,
-              );
-              const startHourOptions = Array.from(
-                { length: closingHour - durationHours - openingHour + 1 },
-                (_, index) => openingHour + index,
-              );
-
-              return (
-                <article
-                  key={booking.id}
-                  className="rounded-xl border border-court-800/10 bg-white p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="font-bold text-ink-900">
-                        {booking.customerName ?? "Customer"}
-                      </p>
-                      <p className="mt-1 text-xs text-ink-500">
-                        {booking.courtName} ·{" "}
-                        {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
-                        {manilaTimeFormatter.format(new Date(booking.endsAt))} ·{" "}
-                        {booking.status}
-                      </p>
-                      <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
-                        {booking.reference}
-                      </p>
-                    </div>
-
-                    <details className="group sm:text-right">
-                      <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-court-800/20 px-3 text-xs font-bold text-court-700 transition hover:bg-court-700/5">
-                        Reschedule
-                      </summary>
-                      <form
-                        action={rescheduleBookingAction}
-                        className="mt-3 grid gap-3 rounded-lg border border-court-800/10 bg-cream-50 p-3 text-left"
-                      >
-                        <input type="hidden" name="bookingId" value={booking.id} />
-                        <input
-                          type="hidden"
-                          name="returnDate"
-                          value={selectedDay}
-                        />
-                        <label className="grid gap-1 text-xs font-bold text-ink-900">
-                          Court
-                          <select
-                            name="courtId"
-                            defaultValue={String(booking.courtId)}
-                            required
-                            className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
-                          >
-                            {courts.map((court) => (
-                              <option key={court.id} value={court.id}>
-                                {court.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="grid gap-1 text-xs font-bold text-ink-900">
-                            Date
-                            <input
-                              type="date"
-                              name="newDate"
-                              min={today}
-                              defaultValue={selectedDay}
-                              required
-                              className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
-                            />
-                          </label>
-                          <label className="grid gap-1 text-xs font-bold text-ink-900">
-                            Starts
-                            <select
-                              name="startHour"
-                              defaultValue={String(startHour)}
-                              required
-                              className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
-                            >
-                              {startHourOptions.map((hour) => (
-                                <option key={hour} value={hour}>
-                                  {hourLabel(hour)} - {hourLabel(hour + durationHours)}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                        <label className="grid gap-1 text-xs font-bold text-ink-900">
-                          Note to customer (optional)
-                          <input
-                            type="text"
-                            name="note"
-                            maxLength={240}
-                            placeholder="e.g. Moved as discussed by phone"
-                            className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
-                          />
-                        </label>
-                        <p className="text-[11px] leading-5 text-ink-500">
-                          Keeps the {durationHours}-hour duration and the
-                          original price. The customer is emailed the new
-                          schedule.
-                        </p>
-                        <button
-                          type="submit"
-                          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-court-700 px-3 text-xs font-bold text-white transition hover:bg-court-800"
-                        >
-                          Move booking
-                        </button>
-                      </form>
-                    </details>
+            {reschedulableBookings.map((booking) => (
+              <article
+                key={booking.id}
+                className="rounded-xl border border-court-800/10 bg-white p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-ink-900">
+                      {booking.customerName ?? "Customer"}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-500">
+                      {booking.courtName} ·{" "}
+                      {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
+                      {manilaTimeFormatter.format(new Date(booking.endsAt))} ·{" "}
+                      {booking.status}
+                    </p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
+                      {booking.reference}
+                    </p>
                   </div>
-                </article>
-              );
-            })}
+
+                  <RescheduleBookingForm
+                    booking={booking}
+                    courts={courts}
+                    selectedDay={selectedDay}
+                    today={today}
+                    openingHour={openingHour}
+                    closingHour={closingHour}
+                    nowIso={nowIso}
+                  />
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       ) : null}
@@ -393,7 +311,7 @@ export function CalendarDayGrid({
 
                   <details className="group sm:text-right">
                     <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
-                      Remove event
+                      Cancel event
                     </summary>
                     <form
                       action={removeOpenPlaySessionAction}
@@ -409,7 +327,17 @@ export function CalendarDayGrid({
                         name="returnDate"
                         value={selectedDay}
                       />
-                      <label className="flex items-start gap-2 text-xs leading-5 text-red-900">
+                      <label className="grid gap-1 text-xs font-bold text-red-900">
+                        Reason for players (optional)
+                        <input
+                          type="text"
+                          name="reason"
+                          maxLength={240}
+                          placeholder="e.g. Rain, courts are wet"
+                          className="min-h-10 rounded-lg border border-red-200 bg-white px-2 font-normal text-ink-900 outline-none focus:border-red-700"
+                        />
+                      </label>
+                      <label className="mt-3 flex items-start gap-2 text-xs leading-5 text-red-900">
                         <input
                           type="checkbox"
                           name="confirmed"
@@ -417,14 +345,15 @@ export function CalendarDayGrid({
                           required
                           className="mt-0.5 size-4 accent-red-700"
                         />
-                        Unpublish this event and reopen the court. Removal is
-                        blocked if customers have already joined.
+                        Cancel this event and reopen the courts. Everyone who
+                        joined is cancelled and emailed, and any payment is
+                        marked for refund in Money.
                       </label>
                       <button
                         type="submit"
                         className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
                       >
-                        Confirm removal
+                        Confirm cancellation
                       </button>
                     </form>
                   </details>
@@ -471,7 +400,7 @@ export function CalendarDayGrid({
 
                   <details className="group sm:text-right">
                     <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
-                      Remove event
+                      Cancel event
                     </summary>
                     <form
                       action={removeSundayUnliSessionAction}
@@ -487,7 +416,17 @@ export function CalendarDayGrid({
                         name="returnDate"
                         value={selectedDay}
                       />
-                      <label className="flex items-start gap-2 text-xs leading-5 text-red-900">
+                      <label className="grid gap-1 text-xs font-bold text-red-900">
+                        Reason for players (optional)
+                        <input
+                          type="text"
+                          name="reason"
+                          maxLength={240}
+                          placeholder="e.g. Rain, courts are wet"
+                          className="min-h-10 rounded-lg border border-red-200 bg-white px-2 font-normal text-ink-900 outline-none focus:border-red-700"
+                        />
+                      </label>
+                      <label className="mt-3 flex items-start gap-2 text-xs leading-5 text-red-900">
                         <input
                           type="checkbox"
                           name="confirmed"
@@ -495,14 +434,15 @@ export function CalendarDayGrid({
                           required
                           className="mt-0.5 size-4 accent-red-700"
                         />
-                        Remove this session and reopen all three courts.
-                        Removal is blocked if customers have already joined.
+                        Cancel this session and reopen all three courts.
+                        Everyone who joined is cancelled and emailed, and any
+                        payment is marked for refund in Money.
                       </label>
                       <button
                         type="submit"
                         className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
                       >
-                        Confirm removal
+                        Confirm cancellation
                       </button>
                     </form>
                   </details>

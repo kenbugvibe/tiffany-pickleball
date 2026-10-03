@@ -37,6 +37,7 @@ type OwnerCalendarPageProps = {
     removedOpenPlay?: string | string[];
     publishedSundayUnli?: string | string[];
     removedSundayUnli?: string | string[];
+    cancelledPlayers?: string | string[];
     rescheduled?: string | string[];
     rescheduleEmailFailed?: string | string[];
     cancelled?: string | string[];
@@ -107,6 +108,11 @@ export default async function OwnerCalendarPage({
   const removedOpenPlay = first(params.removedOpenPlay);
   const publishedSundayUnli = first(params.publishedSundayUnli);
   const removedSundayUnli = first(params.removedSundayUnli);
+  const cancelledPlayers = Number(first(params.cancelledPlayers) ?? 0);
+  const cancelledPlayersText =
+    cancelledPlayers > 0
+      ? ` ${cancelledPlayers} ${cancelledPlayers === 1 ? "player was" : "players were"} cancelled and emailed; any payments are marked for refund in Money.`
+      : "";
   const rescheduled = first(params.rescheduled);
   const rescheduleEmailFailed = first(params.rescheduleEmailFailed) === "1";
   const cancelled = Number(first(params.cancelled) ?? 0);
@@ -128,16 +134,14 @@ export default async function OwnerCalendarPage({
     "open-play-publish-failed": "Open play could not be published. Confirm the Open Play migration is applied, then try again.",
     "invalid-remove-open-play": "The selected open-play session was invalid.",
     "remove-open-play-confirmation-required": "Confirm that you want to remove the open-play session.",
-    "open-play-has-participants": "This open-play session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
-    "remove-open-play-failed": "The open-play session could not be removed. Confirm the Open Play migration is applied, then try again.",
+    "remove-open-play-failed": "The open-play session could not be cancelled. Confirm the event-cancellation migration is applied, then try again.",
     "invalid-sunday-unli": "Choose a valid Sunday and review the Sunday Unli details.",
     "sunday-unli-in-past": "Choose a future Sunday Unli session.",
     "sunday-unli-conflict": "One or more courts are already occupied Sunday evening. Remove the conflict or choose another Sunday.",
     "sunday-unli-publish-failed": "Sunday Unli could not be published. Confirm the Sunday Unli migration is applied, then try again.",
     "invalid-remove-sunday-unli": "The selected Sunday Unli session was invalid.",
     "remove-sunday-unli-confirmation-required": "Confirm that you want to remove the Sunday Unli session.",
-    "sunday-unli-has-participants": "This Sunday Unli session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
-    "remove-sunday-unli-failed": "The Sunday Unli session could not be removed. Confirm the Sunday Unli migration is applied, then try again.",
+    "remove-sunday-unli-failed": "The Sunday Unli session could not be cancelled. Confirm the event-cancellation migration is applied, then try again.",
     "invalid-reschedule": "The reschedule details were invalid. Review the fields and try again.",
     "reschedule-in-past": "Choose a new time that is in the future.",
     "reschedule-conflict": "That court is already taken at the new time. Choose another court or time.",
@@ -221,8 +225,8 @@ export default async function OwnerCalendarPage({
 
       {removedOpenPlay ? (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Open-play session {removedOpenPlay} removed. The court period is
-          available for new bookings again.
+          Open-play session {removedOpenPlay} cancelled. The court period is
+          available for new bookings again.{cancelledPlayersText}
         </div>
       ) : null}
 
@@ -235,8 +239,8 @@ export default async function OwnerCalendarPage({
 
       {removedSundayUnli ? (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Sunday Unli session {removedSundayUnli} removed. All three courts are
-          available for new bookings again.
+          Sunday Unli session {removedSundayUnli} cancelled. All three courts
+          are available for new bookings again.{cancelledPlayersText}
         </div>
       ) : null}
 
@@ -261,8 +265,8 @@ export default async function OwnerCalendarPage({
           <span className="font-bold">
             {emailFailed} cancellation {emailFailed === 1 ? "email" : "emails"} could not be delivered.
           </span>{" "}
-          The court block and cancellations were saved. The failed notice is
-          recorded for follow-up.
+          The cancellations were saved. The failed notice is recorded for
+          follow-up, so contact those customers directly.
         </div>
       ) : null}
 

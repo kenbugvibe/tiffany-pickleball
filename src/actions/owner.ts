@@ -14,6 +14,7 @@ import { getCourtBlockPreview } from "@/lib/data/owner";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { sendBookingRescheduledNotification } from "@/lib/notifications/booking-rescheduled";
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
+import { sendEventCancelledNotification } from "@/lib/notifications/event-cancelled";
 import {
   openPlayReturnPath,
   openPlayTimes,
@@ -520,6 +521,119 @@ export async function createOpenPlaySessionAction(formData: FormData) {
   );
 }
 
+type EventCancellationResult = {
+  reference: string;
+  cancelledCount: number;
+  failedEmails: number;
+};
+
+async function deliverEventCancellation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  data: unknown,
+): Promise<EventCancellationResult> {
+  const result = (data ?? {}) as {
+    session_reference?: unknown;
+    cancelled_count?: unknown;
+    notification_ids?: unknown;
+  };
+  const notificationIds = Array.isArray(result.notification_ids)
+    ? result.notification_ids.filter(
+        (value): value is string =>
+          typeof value === "string" && UUID_PATTERN.test(value),
+      )
+    : [];
+  let failedEmails = 0;
+
+  if (notificationIds.length > 0) {
+    const { data: notifications, error } = await supabase
+      .from("customer_notifications")
+      .select(
+        "id, recipient_name, recipient_email, booking_reference, event_label, court_name, starts_at, ends_at, reason, refund_amount",
+      )
+      .in("id", notificationIds);
+
+    if (error || !notifications) {
+      failedEmails = notificationIds.length;
+    } else {
+      const deliveryResults = await Promise.all(
+        notifications.map(async (notification) => {
+          let delivery: { ok: true } | { ok: false; error: string };
+
+          try {
+            delivery = await sendEventCancelledNotification({
+              ...notification,
+              refund_amount: Number(notification.refund_amount),
+            });
+          } catch {
+            delivery = {
+              ok: false,
+              error: "The email provider could not be reached.",
+            };
+          }
+
+          const { error: updateError } = await supabase
+            .from("customer_notifications")
+            .update(
+              delivery.ok
+                ? {
+                    status: "sent",
+                    sent_at: new Date().toISOString(),
+                    last_error: null,
+                  }
+                : {
+                    status: "failed",
+                    sent_at: null,
+                    last_error: delivery.error.slice(0, 1000),
+                  },
+            )
+            .eq("id", notification.id);
+
+          return delivery.ok && !updateError;
+        }),
+      );
+
+      failedEmails =
+        notificationIds.length -
+        notifications.length +
+        deliveryResults.filter((delivered) => !delivered).length;
+    }
+  }
+
+  return {
+    reference:
+      typeof result.session_reference === "string"
+        ? result.session_reference
+        : "removed",
+    cancelledCount:
+      typeof result.cancelled_count === "number" ? result.cancelled_count : 0,
+    failedEmails,
+  };
+}
+
+function eventCancellationParams(
+  key: "removedOpenPlay" | "removedSundayUnli",
+  result: EventCancellationResult,
+) {
+  const params = new URLSearchParams({
+    [key]: result.reference,
+    cancelledPlayers: String(result.cancelledCount),
+  });
+
+  if (result.failedEmails > 0) {
+    params.set("emailFailed", String(result.failedEmails));
+  }
+
+  return params.toString();
+}
+
+function revalidateEventCancellation() {
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+  revalidatePath("/owner/money");
+  revalidatePath("/my-bookings");
+}
+
 export async function removeOpenPlaySessionAction(formData: FormData) {
   await requireOwner();
 
@@ -528,8 +642,9 @@ export async function removeOpenPlaySessionAction(formData: FormData) {
   const returnDate = isIsoDate(submittedDate)
     ? submittedDate
     : getTodayInManila();
+  const reason = String(formData.get("reason") ?? "").trim();
 
-  if (!UUID_PATTERN.test(sessionId)) {
+  if (!UUID_PATTERN.test(sessionId) || reason.length > 240) {
     redirect(`${openPlayReturnPath(returnDate)}&error=invalid-remove-open-play`);
   }
 
@@ -542,22 +657,19 @@ export async function removeOpenPlaySessionAction(formData: FormData) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("remove_open_play_session", {
     p_session_id: sessionId,
+    p_reason: reason || null,
   });
 
-  if (error || typeof data !== "string") {
-    const message = error?.message.toLowerCase() ?? "";
-    const errorCode = message.includes("active participants")
-      ? "open-play-has-participants"
-      : "remove-open-play-failed";
-    redirect(`${openPlayReturnPath(returnDate)}&error=${errorCode}`);
+  if (error || !data || typeof data !== "object") {
+    redirect(`${openPlayReturnPath(returnDate)}&error=remove-open-play-failed`);
   }
 
-  revalidatePath("/");
-  revalidatePath("/owner/calendar");
-  revalidatePath("/owner/today");
+  const result = await deliverEventCancellation(supabase, data);
+
+  revalidateEventCancellation();
 
   redirect(
-    `${openPlayReturnPath(returnDate)}&removedOpenPlay=${encodeURIComponent(data)}`,
+    `${openPlayReturnPath(returnDate)}&${eventCancellationParams("removedOpenPlay", result)}`,
   );
 }
 
@@ -619,8 +731,9 @@ export async function removeSundayUnliSessionAction(formData: FormData) {
   const returnDate = isIsoDate(submittedDate)
     ? submittedDate
     : getTodayInManila();
+  const reason = String(formData.get("reason") ?? "").trim();
 
-  if (!UUID_PATTERN.test(sessionId)) {
+  if (!UUID_PATTERN.test(sessionId) || reason.length > 240) {
     redirect(
       `${sundayUnliReturnPath(returnDate)}&error=invalid-remove-sunday-unli`,
     );
@@ -635,21 +748,18 @@ export async function removeSundayUnliSessionAction(formData: FormData) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("remove_sunday_unli_session", {
     p_session_id: sessionId,
+    p_reason: reason || null,
   });
 
-  if (error || typeof data !== "string") {
-    const message = error?.message.toLowerCase() ?? "";
-    const errorCode = message.includes("active participants")
-      ? "sunday-unli-has-participants"
-      : "remove-sunday-unli-failed";
-    redirect(`${sundayUnliReturnPath(returnDate)}&error=${errorCode}`);
+  if (error || !data || typeof data !== "object") {
+    redirect(`${sundayUnliReturnPath(returnDate)}&error=remove-sunday-unli-failed`);
   }
 
-  revalidatePath("/");
-  revalidatePath("/owner/calendar");
-  revalidatePath("/owner/today");
+  const result = await deliverEventCancellation(supabase, data);
+
+  revalidateEventCancellation();
 
   redirect(
-    `${sundayUnliReturnPath(returnDate)}&removedSundayUnli=${encodeURIComponent(data)}`,
+    `${sundayUnliReturnPath(returnDate)}&${eventCancellationParams("removedSundayUnli", result)}`,
   );
 }
