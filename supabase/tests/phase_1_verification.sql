@@ -20,8 +20,6 @@ declare
   v_unli_signup_id uuid;
   v_unli_payment_id uuid;
   v_recurring_rule_id uuid;
-  v_expiring_booking_id uuid;
-  v_expired_booking_count integer;
   v_court_fee integer;
   v_paddle_fee integer;
   v_total integer;
@@ -110,12 +108,10 @@ begin
     select 1
     from public.bookings
     where id = v_booking_id
-      and hold_expires_at between
-        pg_catalog.clock_timestamp() + interval '29 minutes'
-        and pg_catalog.clock_timestamp() + interval '31 minutes'
+      and hold_expires_at is null
       and payment_proof_submitted_at is null
   ) then
-    raise exception 'The initial 30-minute payment hold was not created correctly';
+    raise exception 'Regular bookings must not have a payment expiry';
   end if;
 
   begin
@@ -239,6 +235,15 @@ begin
     raise exception 'Open-play price failed: expected 120, got %', v_total;
   end if;
 
+  if not exists (
+    select 1
+    from public.open_play_signups
+    where id = v_open_play_signup_id
+      and hold_expires_at is null
+  ) then
+    raise exception 'Open-play registrations must not have a payment expiry';
+  end if;
+
   insert into public.payments (
     open_play_signup_id,
     gcash_ref,
@@ -304,6 +309,15 @@ begin
 
   if v_total is distinct from 120 then
     raise exception 'Sunday unli price failed: expected 120, got %', v_total;
+  end if;
+
+  if not exists (
+    select 1
+    from public.sunday_unli_signups
+    where id = v_unli_signup_id
+      and hold_expires_at is null
+  ) then
+    raise exception 'Sunday unli registrations must not have a payment expiry';
   end if;
 
   insert into public.payments (
@@ -382,39 +396,6 @@ begin
     date '2099-09-13',
     'conflict'
   );
-
-  insert into public.bookings (
-    customer_id,
-    court_id,
-    starts_at,
-    ends_at,
-    kind
-  )
-  values (
-    v_customer_id,
-    3,
-    timestamptz '2099-09-13 14:00:00+08',
-    timestamptz '2099-09-13 15:00:00+08',
-    'regular'
-  )
-  returning id into v_expiring_booking_id;
-
-  update public.bookings
-  set hold_expires_at = pg_catalog.statement_timestamp() - interval '1 minute'
-  where id = v_expiring_booking_id;
-
-  select bookings_cancelled
-  into v_expired_booking_count
-  from public.expire_payment_holds();
-
-  if v_expired_booking_count < 1 or not exists (
-    select 1
-    from public.bookings
-    where id = v_expiring_booking_id
-      and status = 'cancelled'
-  ) then
-    raise exception 'Expired-hold cleanup failed';
-  end if;
 
   select
     collected,
@@ -534,6 +515,6 @@ begin
 end;
 $$;
 
-select 'PASS - pricing, overlap, products, holds, revenue, availability, and RLS checks succeeded' as phase_1_result;
+select 'PASS - pricing, overlap, products, non-expiring payments, revenue, availability, and RLS checks succeeded' as phase_1_result;
 
 rollback;

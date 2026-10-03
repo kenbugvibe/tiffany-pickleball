@@ -44,11 +44,11 @@ export function OpenPlayJoinForm({
         disabled={pending || !paymentConfigured}
         className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white transition hover:bg-court-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending ? "Creating payment hold…" : "Join open play"}
+        {pending ? "Creating registration…" : "Join open play"}
       </button>
       <p className="mt-3 text-center text-xs leading-5 text-ink-500">
-        Your place is held for 30 minutes while you send {priceLabel} through
-        GCash and upload the receipt.
+        Continue to GCash, send {priceLabel}, and upload the receipt for
+        Tiffany&apos;s review.
       </p>
     </form>
   );

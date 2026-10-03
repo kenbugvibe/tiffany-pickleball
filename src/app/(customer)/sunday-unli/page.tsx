@@ -66,11 +66,7 @@ export default async function SundayUnliPage({
       );
     }
 
-    if (
-      existingSignup.status === "pending" &&
-      existingSignup.hold_expires_at &&
-      new Date(existingSignup.hold_expires_at) > new Date()
-    ) {
+    if (existingSignup.status === "pending") {
       redirect(
         `/sunday-unli/payment/${encodeURIComponent(existingSignup.reference)}`,
       );

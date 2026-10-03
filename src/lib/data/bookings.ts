@@ -3,12 +3,14 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 type CourtRelation = { name: string } | { name: string }[] | null;
+type CustomerRelation = { full_name: string } | { full_name: string }[] | null;
 
 export type CustomerBooking = {
   id: string;
   reference: string;
   court_id: number;
   court_name: string;
+  customer_name: string | null;
   starts_at: string;
   ends_at: string;
   paddle_count: number;
@@ -16,7 +18,6 @@ export type CustomerBooking = {
   paddle_fee: number;
   total_amount: number;
   status: string;
-  hold_expires_at: string | null;
   payment_proof_submitted_at: string | null;
   customer_note: string | null;
   payment: {
@@ -36,12 +37,17 @@ function courtName(courts: CourtRelation) {
   return courts?.name ?? "Court";
 }
 
+function customerName(customers: CustomerRelation) {
+  const customer = Array.isArray(customers) ? customers[0] : customers;
+  return customer?.full_name?.trim() || null;
+}
+
 export async function getCustomerBooking(reference: string) {
   const supabase = await createClient();
   const { data: booking, error } = await supabase
     .from("bookings")
     .select(
-      "id, reference, court_id, starts_at, ends_at, paddle_count, court_fee, paddle_fee, total_amount, status, hold_expires_at, payment_proof_submitted_at, customer_note, courts(name)",
+      "id, reference, court_id, starts_at, ends_at, paddle_count, court_fee, paddle_fee, total_amount, status, payment_proof_submitted_at, customer_note, courts(name), customers(full_name)",
     )
     .eq("reference", reference)
     .eq("kind", "regular")
@@ -60,6 +66,7 @@ export async function getCustomerBooking(reference: string) {
   return {
     ...booking,
     court_name: courtName(booking.courts as CourtRelation),
+    customer_name: customerName(booking.customers as CustomerRelation),
     payment: payment ?? null,
   } as CustomerBooking;
 }

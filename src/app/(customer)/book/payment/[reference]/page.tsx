@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { BookingShell } from "@/components/booking/booking-shell";
-import { HoldCountdown } from "@/components/booking/hold-countdown";
 import { ReceiptUploadForm } from "@/components/booking/receipt-upload-form";
 import { getCustomerBooking } from "@/lib/data/bookings";
 import {
@@ -33,8 +32,7 @@ export default async function BookingPaymentPage({
     redirect(`/book/confirmation/${encodeURIComponent(reference)}`);
   }
 
-  const expiresAt = booking.hold_expires_at;
-  const expired = booking.status !== "pending" || !expiresAt;
+  const paymentUnavailable = booking.status !== "pending";
   const gcashName = process.env.GCASH_ACCOUNT_NAME?.trim() ?? "";
   const gcashNumber = process.env.GCASH_MOBILE_NUMBER?.trim() ?? "";
   const configuredQrPath = process.env.GCASH_QR_IMAGE_PATH?.trim() ?? "";
@@ -48,10 +46,6 @@ export default async function BookingPaymentPage({
     <BookingShell currentStep={5}>
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
-          {expiresAt ? (
-            <HoldCountdown expiresAt={expiresAt} />
-          ) : null}
-
           <section className="rounded-2xl border border-court-800/10 bg-white p-5 shadow-[0_8px_30px_rgba(7,52,28,.06)] sm:p-7">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-court-700">
               Step 4 · Pay through GCash
@@ -96,7 +90,7 @@ export default async function BookingPaymentPage({
             <ol className="mt-5 list-decimal space-y-2 pl-5 text-sm leading-6 text-ink-500">
               <li>Send the exact amount shown above.</li>
               <li>Save or screenshot the successful GCash receipt.</li>
-              <li>Enter its reference number and upload it before the hold ends.</li>
+              <li>Enter its reference number and upload the receipt below.</li>
             </ol>
           </section>
 
@@ -137,10 +131,14 @@ export default async function BookingPaymentPage({
           </p>
 
           <div className="mt-6">
-            {expired || !expiresAt ? (
+            {paymentUnavailable ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p className="font-bold">This payment hold has expired.</p>
-                <p className="mt-1">Choose an available court time again.</p>
+                <p className="font-bold">
+                  This booking is no longer awaiting payment.
+                </p>
+                <p className="mt-1">
+                  Choose an available court time again if needed.
+                </p>
                 <Link
                   href="/#availability"
                   className="mt-3 inline-flex min-h-11 items-center font-bold underline underline-offset-2"
@@ -151,7 +149,6 @@ export default async function BookingPaymentPage({
             ) : (
               <ReceiptUploadForm
                 reference={booking.reference}
-                expiresAt={expiresAt}
                 paymentConfigured={paymentConfigured}
               />
             )}

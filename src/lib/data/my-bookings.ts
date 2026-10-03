@@ -23,7 +23,6 @@ type CourtBookingRow = {
   paddle_count: number;
   total_amount: number;
   status: string;
-  hold_expires_at: string | null;
   payment_proof_submitted_at: string | null;
   courts: OneOrMany<CourtRelation>;
   payments: OneOrMany<PaymentRelation>;
@@ -35,7 +34,6 @@ type SignupRow = {
   session_id: string;
   amount_due: number;
   status: string;
-  hold_expires_at: string | null;
   payment_proof_submitted_at: string | null;
   payments: OneOrMany<PaymentRelation>;
 };
@@ -67,7 +65,6 @@ export type MyBookingDisplayStatus =
   | "cancelled"
   | "refund_pending"
   | "refunded"
-  | "expired"
   | "no_show";
 
 export type MyBookingItem = {
@@ -95,8 +92,6 @@ function one<T>(value: OneOrMany<T>) {
 function displayStatus(
   reservationStatus: string,
   paymentStatus: string | null,
-  holdExpiresAt: string | null,
-  evaluatedAt: number,
 ): MyBookingDisplayStatus {
   if (paymentStatus === "refund_pending") return "refund_pending";
   if (paymentStatus === "refunded") return "refunded";
@@ -108,10 +103,6 @@ function displayStatus(
     return "confirmed";
   }
   if (!paymentStatus) {
-    if (!holdExpiresAt || new Date(holdExpiresAt).valueOf() <= evaluatedAt) {
-      return "expired";
-    }
-
     return "awaiting_payment";
   }
 
@@ -185,7 +176,7 @@ export async function getMyBookingsData() {
     supabase
       .from("bookings")
       .select(
-        "id, reference, starts_at, ends_at, paddle_count, total_amount, status, hold_expires_at, payment_proof_submitted_at, courts(name), payments(id, status, gcash_ref, created_at)",
+        "id, reference, starts_at, ends_at, paddle_count, total_amount, status, payment_proof_submitted_at, courts(name), payments(id, status, gcash_ref, created_at)",
       )
       .eq("customer_id", customer.id)
       .eq("kind", "regular")
@@ -193,14 +184,14 @@ export async function getMyBookingsData() {
     supabase
       .from("open_play_signups")
       .select(
-        "id, reference, session_id, amount_due, status, hold_expires_at, payment_proof_submitted_at, payments(id, status, gcash_ref, created_at)",
+        "id, reference, session_id, amount_due, status, payment_proof_submitted_at, payments(id, status, gcash_ref, created_at)",
       )
       .eq("customer_id", customer.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("sunday_unli_signups")
       .select(
-        "id, reference, session_id, amount_due, status, hold_expires_at, payment_proof_submitted_at, payments(id, status, gcash_ref, created_at)",
+        "id, reference, session_id, amount_due, status, payment_proof_submitted_at, payments(id, status, gcash_ref, created_at)",
       )
       .eq("customer_id", customer.id)
       .order("created_at", { ascending: false }),
@@ -271,8 +262,6 @@ export async function getMyBookingsData() {
     const status = displayStatus(
       booking.status,
       payment?.status ?? null,
-      booking.hold_expires_at,
-      evaluatedAt,
     );
     const action = actionFor(
       "court_booking",
@@ -305,8 +294,6 @@ export async function getMyBookingsData() {
     const status = displayStatus(
       signup.status,
       payment?.status ?? null,
-      signup.hold_expires_at,
-      evaluatedAt,
     );
     const action = actionFor(
       "open_play",
@@ -339,8 +326,6 @@ export async function getMyBookingsData() {
     const status = displayStatus(
       signup.status,
       payment?.status ?? null,
-      signup.hold_expires_at,
-      evaluatedAt,
     );
     const action = actionFor(
       "sunday_unli",

@@ -36,12 +36,12 @@ GitHub Actions runs the same checks for pull requests and pushes to `main`.
 
 ## Database migrations
 
-Apply the numbered SQL files in `supabase/migrations/` in order. Phase 8 enables
-Supabase Cron and runs `public.expire_payment_holds()` every minute so unpaid
-holds stop blocking courts after they expire. It also keeps seven days of cron
-run history for troubleshooting.
+Apply the numbered SQL files in `supabase/migrations/` in order. The latest
+migrations remove timed payment holds from court bookings, Open Play, and
+Sunday Unli. They also remove the two cron jobs that previously expired holds
+and pruned their run history.
 
-After applying Phase 8, verify it in the Supabase SQL Editor:
+After applying the latest migrations, this query should return no rows:
 
 ```sql
 select jobname, schedule, active
@@ -52,8 +52,6 @@ where jobname in (
 )
 order by jobname;
 ```
-
-Both rows should return with `active = true`.
 
 ## Production deployment
 
@@ -109,7 +107,7 @@ Git. `.env.local` and other local environment files are ignored.
 - Supabase Auth email confirmation is enabled.
 - Supabase custom SMTP sends to addresses outside the project team.
 - Supabase Storage bucket and receipt policies are applied.
-- Phase 8 Supabase Cron jobs are active and recent runs succeed.
+- The payment-hold cron jobs are gone (the migrations query above returns no rows).
 - Vercel Production has all required environment variables.
 - `SITE_URL` and Supabase Auth URL settings use the same HTTPS origin.
 - The owner account is confirmed and present in `public.admin_users`.

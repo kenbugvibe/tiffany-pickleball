@@ -39,7 +39,6 @@ export type CustomerSundayUnliSignup = {
   sessionId: string;
   amountDue: number;
   status: string;
-  holdExpiresAt: string | null;
   paymentProofSubmittedAt: string | null;
   session: PublishedSundayUnliSession;
   payment: PaymentRow | null;
@@ -87,7 +86,7 @@ export async function getActiveSundayUnliSignupForSession(sessionId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("sunday_unli_signups")
-    .select("reference, status, hold_expires_at, payment_proof_submitted_at")
+    .select("reference, status, payment_proof_submitted_at")
     .eq("session_id", sessionId)
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })
@@ -106,7 +105,7 @@ export async function getCustomerSundayUnliSignup(reference: string) {
   const { data: signup, error } = await supabase
     .from("sunday_unli_signups")
     .select(
-      "id, reference, session_id, amount_due, status, hold_expires_at, payment_proof_submitted_at",
+      "id, reference, session_id, amount_due, status, payment_proof_submitted_at",
     )
     .eq("reference", reference)
     .maybeSingle();
@@ -139,7 +138,6 @@ export async function getCustomerSundayUnliSignup(reference: string) {
     sessionId: signup.session_id,
     amountDue: Number(signup.amount_due),
     status: signup.status,
-    holdExpiresAt: signup.hold_expires_at,
     paymentProofSubmittedAt: signup.payment_proof_submitted_at,
     session: mapSession(sessionRow),
     payment: (paymentResult.data as PaymentRow | null) ?? null,

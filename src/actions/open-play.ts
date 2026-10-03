@@ -137,19 +137,17 @@ export async function submitOpenPlayPaymentProofAction(
 
   const { data: signup } = await supabase
     .from("open_play_signups")
-    .select("id, status, hold_expires_at, payment_proof_submitted_at")
+    .select("id, status, payment_proof_submitted_at")
     .eq("reference", reference)
     .maybeSingle();
 
   if (
     !signup ||
     signup.status !== "pending" ||
-    signup.payment_proof_submitted_at ||
-    !signup.hold_expires_at ||
-    new Date(signup.hold_expires_at) <= new Date()
+    signup.payment_proof_submitted_at
   ) {
     return failure(
-      "This payment hold has expired. Return to the event and register again.",
+      "This registration is no longer awaiting payment. Return to the event and try again.",
     );
   }
 
@@ -177,10 +175,19 @@ export async function submitOpenPlayPaymentProofAction(
   );
 
   if (paymentError) {
+    console.error(
+      `[open-play-payment] submit RPC failed ${JSON.stringify({
+        signupId: signup.id,
+        code: paymentError.code,
+        message: paymentError.message,
+        details: paymentError.details,
+        hint: paymentError.hint,
+      })}`,
+    );
     await supabase.storage.from(RECEIPT_BUCKET).remove([receiptPath]);
 
     return failure(
-      "We could not attach the receipt. Check that the hold is still active and try again.",
+      "We could not attach the receipt. Refresh the page and try again.",
     );
   }
 

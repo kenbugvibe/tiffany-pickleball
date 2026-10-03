@@ -23,7 +23,7 @@ const statusDetails: Record<
 > = {
   awaiting_payment: {
     label: "Awaiting payment",
-    description: "Complete your GCash payment proof before the hold expires.",
+    description: "Complete your GCash payment and upload the receipt.",
     className: "bg-amber-100 text-amber-900",
   },
   pending_verification: {
@@ -50,11 +50,6 @@ const statusDetails: Record<
     label: "Refunded",
     description: "Tiffany marked the GCash refund as completed.",
     className: "bg-sky-100 text-sky-800",
-  },
-  expired: {
-    label: "Hold expired",
-    description: "No receipt was submitted before the payment hold ended.",
-    className: "bg-stone-200 text-stone-700",
   },
   no_show: {
     label: "No show",

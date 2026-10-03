@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
-import { createBookingHoldAction } from "@/actions/bookings";
+import { createBookingAction } from "@/actions/bookings";
 import { emptyBookingActionState } from "@/lib/booking-form-state";
 import type { AvailabilityRow } from "@/lib/data/availability";
 import { manilaTimeFormatter } from "@/lib/dates";
@@ -49,8 +49,9 @@ export function BookingForm({
     return initial ? [initial.starts_at] : [];
   });
   const [paddleCount, setPaddleCount] = useState(0);
+  const [needsPaddles, setNeedsPaddles] = useState<boolean | null>(null);
   const [state, formAction, pending] = useActionState(
-    createBookingHoldAction,
+    createBookingAction,
     emptyBookingActionState,
   );
 
@@ -134,6 +135,13 @@ export function BookingForm({
         value={lastSlot?.ends_at ?? ""}
       />
       <input type="hidden" name="paddleCount" value={paddleCount} />
+      <input
+        type="hidden"
+        name="needsPaddles"
+        value={
+          needsPaddles === null ? "" : needsPaddles ? "yes" : "no"
+        }
+      />
 
       <section className="rounded-2xl border border-court-800/10 bg-white p-5 shadow-[0_8px_30px_rgba(7,52,28,.06)] sm:p-7">
         <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-court-700">
@@ -234,37 +242,89 @@ export function BookingForm({
           Step 3
         </p>
         <h2 className="mt-2 font-display text-3xl font-bold text-ink-900">
-          Add paddle rentals
+          Do you need paddles?
         </h2>
         <p className="mt-2 text-sm text-ink-500">
           {formatPeso(paddlePricePerHour)} per paddle, per hour.
         </p>
 
-        <div className="mt-5 flex items-center gap-3">
+        <div
+          role="group"
+          aria-label="Paddle rental choice"
+          className="mt-5 grid gap-3 sm:grid-cols-2"
+        >
           <button
             type="button"
-            onClick={() => setPaddleCount((count) => Math.max(0, count - 1))}
-            disabled={paddleCount === 0}
-            aria-label="Remove one paddle"
-            className="grid size-12 place-items-center rounded-xl border border-court-800/20 text-xl font-bold text-court-800 disabled:opacity-35"
+            onClick={() => {
+              setNeedsPaddles(true);
+              setPaddleCount((count) => Math.max(1, count));
+            }}
+            aria-pressed={needsPaddles === true}
+            className={`min-h-12 rounded-xl border px-4 font-bold transition ${
+              needsPaddles === true
+                ? "border-court-800 bg-court-800 text-white"
+                : "border-court-800/20 bg-white text-court-800 hover:border-court-800"
+            }`}
           >
-            −
+            Yes, add paddles
           </button>
-          <output
-            aria-live="polite"
-            className="grid min-h-12 min-w-20 place-items-center rounded-xl bg-cream-50 px-5 font-mono text-xl font-bold text-ink-900"
-          >
-            {paddleCount}
-          </output>
           <button
             type="button"
-            onClick={() => setPaddleCount((count) => count + 1)}
-            aria-label="Add one paddle"
-            className="grid size-12 place-items-center rounded-xl bg-court-800 text-xl font-bold text-white hover:bg-court-700"
+            onClick={() => {
+              setNeedsPaddles(false);
+              setPaddleCount(0);
+            }}
+            aria-pressed={needsPaddles === false}
+            className={`min-h-12 rounded-xl border px-4 font-bold transition ${
+              needsPaddles === false
+                ? "border-court-800 bg-court-800 text-white"
+                : "border-court-800/20 bg-white text-court-800 hover:border-court-800"
+            }`}
           >
-            +
+            No paddles
           </button>
         </div>
+
+        {needsPaddles === true ? (
+          <div className="mt-5 rounded-xl bg-cream-50 p-4">
+            <p className="text-sm font-semibold text-ink-900">
+              How many paddles do you need?
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setPaddleCount((count) => Math.max(1, count - 1))
+                }
+                disabled={paddleCount === 1}
+                aria-label="Remove one paddle"
+                className="grid size-12 place-items-center rounded-xl border border-court-800/20 text-xl font-bold text-court-800 disabled:opacity-35"
+              >
+                −
+              </button>
+              <output
+                aria-live="polite"
+                className="grid min-h-12 min-w-20 place-items-center rounded-xl bg-white px-5 font-mono text-xl font-bold text-ink-900"
+              >
+                {paddleCount}
+              </output>
+              <button
+                type="button"
+                onClick={() => setPaddleCount((count) => count + 1)}
+                aria-label="Add one paddle"
+                className="grid size-12 place-items-center rounded-xl bg-court-800 text-xl font-bold text-white hover:bg-court-700"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {needsPaddles === null ? (
+          <p className="mt-3 text-sm font-medium text-[#8a6700]">
+            Choose yes or no before continuing.
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-2xl bg-court-950 p-5 text-white shadow-[0_12px_35px_rgba(7,52,28,.18)] sm:p-7">
@@ -319,13 +379,18 @@ export function BookingForm({
 
         <button
           type="submit"
-          disabled={!firstSlot || pending || !paymentConfigured}
+          disabled={
+            !firstSlot ||
+            needsPaddles === null ||
+            pending ||
+            !paymentConfigured
+          }
           className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-5 font-bold text-court-950 transition hover:bg-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Holding your court…" : "Hold court for 30 minutes"}
+          {pending ? "Reserving your court…" : "Continue to GCash"}
         </button>
         <p className="mt-3 text-center text-xs text-white/55">
-          Your selected time becomes unavailable to others during the payment hold.
+          Your selected time becomes unavailable to others after you continue.
         </p>
       </section>
     </form>

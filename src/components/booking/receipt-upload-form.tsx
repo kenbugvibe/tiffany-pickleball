@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { submitPaymentProofAction } from "@/actions/bookings";
 import { submitOpenPlayPaymentProofAction } from "@/actions/open-play";
@@ -12,12 +12,10 @@ const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 export function ReceiptUploadForm({
   reference,
   paymentKind = "booking",
-  expiresAt,
   paymentConfigured,
 }: {
   reference: string;
   paymentKind?: "booking" | "open-play" | "sunday-unli";
-  expiresAt: string;
   paymentConfigured: boolean;
 }) {
   const submitAction =
@@ -32,26 +30,10 @@ export function ReceiptUploadForm({
   );
   const [compressing, setCompressing] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
-  const [expired, setExpired] = useState(
-    () => new Date(expiresAt).valueOf() <= Date.now(),
-  );
-
-  useEffect(() => {
-    const update = () => setExpired(new Date(expiresAt).valueOf() <= Date.now());
-    const timer = window.setInterval(update, 1000);
-    update();
-
-    return () => window.clearInterval(timer);
-  }, [expiresAt]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setClientError(null);
-
-    if (expired) {
-      setClientError("This payment hold has expired. Choose the time again.");
-      return;
-    }
 
     const formData = new FormData(event.currentTarget);
     const receipt = formData.get("receipt");
@@ -183,16 +165,14 @@ export function ReceiptUploadForm({
 
       <button
         type="submit"
-        disabled={busy || expired || !paymentConfigured}
+        disabled={busy || !paymentConfigured}
         className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-court-800 px-5 font-bold text-white transition hover:bg-court-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {compressing
           ? "Compressing receipt…"
           : pending
             ? "Sending proof…"
-            : expired
-              ? "Payment hold expired"
-              : "Send payment proof"}
+            : "Send payment proof"}
       </button>
     </form>
   );

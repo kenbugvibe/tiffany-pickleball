@@ -17,7 +17,6 @@ const historyStatuses = new Set([
   "cancelled",
   "refund_pending",
   "refunded",
-  "expired",
   "no_show",
 ]);
 
@@ -217,7 +216,7 @@ function MyBookingsContent({
         />
         <BookingSection
           title="Past and history"
-          description="Completed, expired, cancelled, and refunded reservation records."
+          description="Completed, cancelled, and refunded reservation records."
           items={history}
           emptyMessage="Past reservations will appear here."
         />

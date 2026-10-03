@@ -7,10 +7,14 @@ import { manilaScheduleFormatter, manilaTimeFormatter } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
 
 export const metadata: Metadata = {
-  title: "Booking received",
+  title: "Salamat!",
 };
 
-function confirmationState(bookingStatus: string, paymentStatus: string) {
+function confirmationState(
+  bookingStatus: string,
+  paymentStatus: string,
+  customerName: string | null,
+) {
   if (paymentStatus === "refunded") {
     return {
       eyebrow: "Refund completed",
@@ -53,7 +57,7 @@ function confirmationState(bookingStatus: string, paymentStatus: string) {
 
   return {
     eyebrow: "Payment proof received",
-    headline: "Your court is reserved.",
+    headline: customerName ? `SALAMAT, ${customerName}!` : "SALAMAT!",
     description:
       "Tiffany will verify your GCash receipt. The booking remains pending until it is approved.",
     label: "Pending verification",
@@ -77,7 +81,11 @@ export default async function BookingConfirmationPage({
     redirect(`/book/payment/${encodeURIComponent(reference)}`);
   }
 
-  const state = confirmationState(booking.status, booking.payment.status);
+  const state = confirmationState(
+    booking.status,
+    booking.payment.status,
+    booking.customer_name,
+  );
 
   return (
     <main className="min-h-screen bg-court-950 px-4 py-8 sm:py-12">

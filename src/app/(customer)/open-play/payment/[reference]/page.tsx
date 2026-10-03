@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { HoldCountdown } from "@/components/booking/hold-countdown";
 import { OpenPlayShell } from "@/components/booking/open-play-shell";
 import { ReceiptUploadForm } from "@/components/booking/receipt-upload-form";
 import { getCustomerOpenPlaySignup } from "@/lib/data/open-play";
@@ -30,8 +28,7 @@ export default async function OpenPlayPaymentPage({
     redirect(`/open-play/confirmation/${encodeURIComponent(reference)}`);
   }
 
-  const expiresAt = signup.holdExpiresAt;
-  const expired = signup.status !== "pending" || !expiresAt;
+  const paymentUnavailable = signup.status !== "pending";
   const gcashName = process.env.GCASH_ACCOUNT_NAME?.trim() ?? "";
   const gcashNumber = process.env.GCASH_MOBILE_NUMBER?.trim() ?? "";
   const configuredQrPath = process.env.GCASH_QR_IMAGE_PATH?.trim() ?? "";
@@ -45,8 +42,6 @@ export default async function OpenPlayPaymentPage({
     <OpenPlayShell>
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
-          {expiresAt ? <HoldCountdown expiresAt={expiresAt} /> : null}
-
           <section className="rounded-2xl border border-court-800/10 bg-white p-5 shadow-[0_8px_30px_rgba(7,52,28,.06)] sm:p-7">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-court-700">
               Pay through GCash
@@ -91,7 +86,7 @@ export default async function OpenPlayPaymentPage({
             <ol className="mt-5 list-decimal space-y-2 pl-5 text-sm leading-6 text-ink-500">
               <li>Send the exact amount shown above.</li>
               <li>Save or screenshot the successful GCash receipt.</li>
-              <li>Upload it before the payment hold ends.</li>
+              <li>Enter its reference number and upload the receipt below.</li>
             </ol>
           </section>
 
@@ -136,22 +131,17 @@ export default async function OpenPlayPaymentPage({
           </p>
 
           <div className="mt-6">
-            {expired || !expiresAt ? (
+            {paymentUnavailable ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p className="font-bold">This payment hold has expired.</p>
-                <p className="mt-1">Return to the event and register again.</p>
-                <Link
-                  href={`/open-play?session=${encodeURIComponent(signup.sessionId)}`}
-                  className="mt-3 inline-flex min-h-11 items-center font-bold underline underline-offset-2"
-                >
-                  Return to open play
-                </Link>
+                <p className="font-bold">
+                  This registration is no longer awaiting payment.
+                </p>
+                <p className="mt-1">Return to the event if you need help.</p>
               </div>
             ) : (
               <ReceiptUploadForm
                 reference={signup.reference}
                 paymentKind="open-play"
-                expiresAt={expiresAt}
                 paymentConfigured={paymentConfigured}
               />
             )}

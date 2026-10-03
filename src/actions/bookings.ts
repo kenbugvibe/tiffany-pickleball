@@ -42,10 +42,10 @@ function bookingError(code: string | undefined) {
     return "One of those times was just reserved. Choose another available time.";
   }
 
-  return "We could not hold that booking. Refresh the schedule and try again.";
+  return "We could not reserve that court. Refresh the schedule and try again.";
 }
 
-export async function createBookingHoldAction(
+export async function createBookingAction(
   _previousState: BookingActionState,
   formData: FormData,
 ): Promise<BookingActionState> {
@@ -69,8 +69,17 @@ export async function createBookingHoldAction(
 
   const courtId = parseInteger(formData.get("courtId"));
   const paddleCount = parseInteger(formData.get("paddleCount"));
+  const needsPaddles = formData.get("needsPaddles");
   const startsAt = parseTimestamp(formData.get("startsAt"));
   const endsAt = parseTimestamp(formData.get("endsAt"));
+
+  if (
+    (needsPaddles !== "yes" && needsPaddles !== "no") ||
+    (needsPaddles === "yes" && (!paddleCount || paddleCount < 1)) ||
+    (needsPaddles === "no" && paddleCount !== 0)
+  ) {
+    return failure("Choose whether you need paddle rentals.");
+  }
 
   if (
     !courtId ||
@@ -184,7 +193,7 @@ export async function submitPaymentProofAction(
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, status, hold_expires_at, payment_proof_submitted_at")
+    .select("id, status, payment_proof_submitted_at")
     .eq("reference", reference)
     .eq("kind", "regular")
     .maybeSingle();
@@ -192,11 +201,11 @@ export async function submitPaymentProofAction(
   if (
     !booking ||
     booking.status !== "pending" ||
-    booking.payment_proof_submitted_at ||
-    !booking.hold_expires_at ||
-    new Date(booking.hold_expires_at) <= new Date()
+    booking.payment_proof_submitted_at
   ) {
-    return failure("This payment hold has expired. Please choose the time again.");
+    return failure(
+      "This booking is no longer awaiting payment. Please choose the time again.",
+    );
   }
 
   const receiptPath = `${user.id}/${booking.id}/${randomUUID()}.${extension}`;
@@ -224,10 +233,19 @@ export async function submitPaymentProofAction(
   );
 
   if (paymentError) {
+    console.error(
+      `[booking-payment] submit RPC failed ${JSON.stringify({
+        bookingId: booking.id,
+        code: paymentError.code,
+        message: paymentError.message,
+        details: paymentError.details,
+        hint: paymentError.hint,
+      })}`,
+    );
     await supabase.storage.from(RECEIPT_BUCKET).remove([receiptPath]);
 
     return failure(
-      "We could not attach the receipt. Check that the hold is still active and try again.",
+      "We could not attach the receipt. Refresh the page and try again.",
     );
   }
 
