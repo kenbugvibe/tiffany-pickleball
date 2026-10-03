@@ -22,7 +22,11 @@ export const manilaTimeFormatter = new Intl.DateTimeFormat("en-PH", {
 });
 
 export function getTodayInManila() {
-  const parts = manilaDateFormatter.formatToParts(new Date());
+  return toManilaIsoDate(new Date());
+}
+
+export function toManilaIsoDate(value: Date) {
+  const parts = manilaDateFormatter.formatToParts(value);
   const values = Object.fromEntries(
     parts.map((part) => [part.type, part.value]),
   );

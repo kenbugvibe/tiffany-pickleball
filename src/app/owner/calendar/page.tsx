@@ -37,6 +37,8 @@ type OwnerCalendarPageProps = {
     removedOpenPlay?: string | string[];
     publishedSundayUnli?: string | string[];
     removedSundayUnli?: string | string[];
+    rescheduled?: string | string[];
+    rescheduleEmailFailed?: string | string[];
     cancelled?: string | string[];
     emailFailed?: string | string[];
     error?: string | string[];
@@ -105,6 +107,8 @@ export default async function OwnerCalendarPage({
   const removedOpenPlay = first(params.removedOpenPlay);
   const publishedSundayUnli = first(params.publishedSundayUnli);
   const removedSundayUnli = first(params.removedSundayUnli);
+  const rescheduled = first(params.rescheduled);
+  const rescheduleEmailFailed = first(params.rescheduleEmailFailed) === "1";
   const cancelled = Number(first(params.cancelled) ?? 0);
   const emailFailed = Number(first(params.emailFailed) ?? 0);
   const error = first(params.error);
@@ -134,6 +138,13 @@ export default async function OwnerCalendarPage({
     "remove-sunday-unli-confirmation-required": "Confirm that you want to remove the Sunday Unli session.",
     "sunday-unli-has-participants": "This Sunday Unli session already has participants. It cannot be removed until the participant-cancellation workflow is available.",
     "remove-sunday-unli-failed": "The Sunday Unli session could not be removed. Confirm the Sunday Unli migration is applied, then try again.",
+    "invalid-reschedule": "The reschedule details were invalid. Review the fields and try again.",
+    "reschedule-in-past": "Choose a new time that is in the future.",
+    "reschedule-conflict": "That court is already taken at the new time. Choose another court or time.",
+    "reschedule-outside-hours": "The booking would run past closing time. Choose an earlier start.",
+    "reschedule-unchanged": "Choose a different court or time to reschedule the booking.",
+    "reschedule-not-allowed": "Only upcoming pending or confirmed court bookings can be rescheduled.",
+    "reschedule-failed": "The booking could not be rescheduled. Confirm the reschedule migration is applied, then try again.",
   };
   const selectedError = error ? errorMessages[error] : null;
   const inputError = parsedBlock && !parsedBlock.ok ? parsedBlock.error : null;
@@ -229,6 +240,22 @@ export default async function OwnerCalendarPage({
         </div>
       ) : null}
 
+      {rescheduled ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Booking {rescheduled} rescheduled. The price is unchanged.
+          {rescheduleEmailFailed ? "" : " The customer was emailed the new schedule."}
+        </div>
+      ) : null}
+
+      {rescheduled && rescheduleEmailFailed ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-bold">
+            The reschedule email could not be delivered.
+          </span>{" "}
+          The new schedule was saved. Contact the customer directly.
+        </div>
+      ) : null}
+
       {emailFailed > 0 ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span className="font-bold">
@@ -248,6 +275,7 @@ export default async function OwnerCalendarPage({
       <div className="mt-7">
         <CalendarDayGrid
           selectedDay={selectedDay}
+          today={data.today}
           courts={data.courts}
           bookings={data.timeline}
           openingHour={data.openingHour}

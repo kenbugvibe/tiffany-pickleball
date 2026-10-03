@@ -1,6 +1,14 @@
+import Link from "next/link";
+
 import type { OwnerUpcomingBooking } from "@/lib/data/owner";
-import { manilaScheduleFormatter } from "@/lib/dates";
+import { manilaScheduleFormatter, toManilaIsoDate } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
+
+function calendarDayHref(startsAt: string) {
+  const day = toManilaIsoDate(new Date(startsAt));
+
+  return `/owner/calendar?week=${day}&day=${day}`;
+}
 
 export function UpcomingBookings({
   bookings,
@@ -46,9 +54,17 @@ export function UpcomingBookings({
               <p className="mt-3 text-sm text-ink-500">
                 {manilaScheduleFormatter.format(new Date(booking.startsAt))}
               </p>
-              <p className="mt-1 text-sm font-bold text-ink-900">
-                {formatPeso(booking.amount)}
-              </p>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-ink-900">
+                  {formatPeso(booking.amount)}
+                </p>
+                <Link
+                  href={calendarDayHref(booking.startsAt)}
+                  className="text-xs font-bold text-court-700 underline-offset-2 hover:underline"
+                >
+                  Reschedule
+                </Link>
+              </div>
             </article>
           ))}
         </div>

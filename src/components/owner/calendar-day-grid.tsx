@@ -2,12 +2,14 @@ import {
   removeCourtBlockAction,
   removeOpenPlaySessionAction,
   removeSundayUnliSessionAction,
+  rescheduleBookingAction,
 } from "@/actions/owner";
 import { manilaTimeFormatter } from "@/lib/dates";
 import type { OwnerTimelineBooking } from "@/lib/data/owner";
 
 type CalendarDayGridProps = {
   selectedDay: string;
+  today: string;
   courts: Array<{ id: number; name: string }>;
   bookings: OwnerTimelineBooking[];
   openingHour: number;
@@ -65,6 +67,7 @@ function eventClass(booking: OwnerTimelineBooking) {
 
 export function CalendarDayGrid({
   selectedDay,
+  today,
   courts,
   bookings,
   openingHour,
@@ -81,6 +84,12 @@ export function CalendarDayGrid({
   const removableBlocks = bookings.filter(
     (booking) =>
       booking.kind === "blocked" && new Date(booking.endsAt).getTime() > now,
+  );
+  const reschedulableBookings = bookings.filter(
+    (booking) =>
+      booking.kind === "regular" &&
+      ["pending", "confirmed"].includes(booking.status) &&
+      new Date(booking.startsAt).getTime() > now,
   );
   const seenOpenPlaySessions = new Set<string>();
   const removableOpenPlay = bookings.filter((booking) => {
@@ -217,6 +226,131 @@ export function CalendarDayGrid({
                 </div>
               </article>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {reschedulableBookings.length > 0 ? (
+        <div className="border-b border-court-800/10 bg-cream-50 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-court-700">
+            Manage customer bookings
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {reschedulableBookings.map((booking) => {
+              const startHour = Math.floor(booking.startMinute / 60);
+              const durationHours = Math.round(
+                (booking.endMinute - booking.startMinute) / 60,
+              );
+              const startHourOptions = Array.from(
+                { length: closingHour - durationHours - openingHour + 1 },
+                (_, index) => openingHour + index,
+              );
+
+              return (
+                <article
+                  key={booking.id}
+                  className="rounded-xl border border-court-800/10 bg-white p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-bold text-ink-900">
+                        {booking.customerName ?? "Customer"}
+                      </p>
+                      <p className="mt-1 text-xs text-ink-500">
+                        {booking.courtName} ·{" "}
+                        {manilaTimeFormatter.format(new Date(booking.startsAt))} -{" "}
+                        {manilaTimeFormatter.format(new Date(booking.endsAt))} ·{" "}
+                        {booking.status}
+                      </p>
+                      <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-ink-500">
+                        {booking.reference}
+                      </p>
+                    </div>
+
+                    <details className="group sm:text-right">
+                      <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-court-800/20 px-3 text-xs font-bold text-court-700 transition hover:bg-court-700/5">
+                        Reschedule
+                      </summary>
+                      <form
+                        action={rescheduleBookingAction}
+                        className="mt-3 grid gap-3 rounded-lg border border-court-800/10 bg-cream-50 p-3 text-left"
+                      >
+                        <input type="hidden" name="bookingId" value={booking.id} />
+                        <input
+                          type="hidden"
+                          name="returnDate"
+                          value={selectedDay}
+                        />
+                        <label className="grid gap-1 text-xs font-bold text-ink-900">
+                          Court
+                          <select
+                            name="courtId"
+                            defaultValue={String(booking.courtId)}
+                            required
+                            className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
+                          >
+                            {courts.map((court) => (
+                              <option key={court.id} value={court.id}>
+                                {court.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="grid gap-1 text-xs font-bold text-ink-900">
+                            Date
+                            <input
+                              type="date"
+                              name="newDate"
+                              min={today}
+                              defaultValue={selectedDay}
+                              required
+                              className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
+                            />
+                          </label>
+                          <label className="grid gap-1 text-xs font-bold text-ink-900">
+                            Starts
+                            <select
+                              name="startHour"
+                              defaultValue={String(startHour)}
+                              required
+                              className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
+                            >
+                              {startHourOptions.map((hour) => (
+                                <option key={hour} value={hour}>
+                                  {hourLabel(hour)} - {hourLabel(hour + durationHours)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <label className="grid gap-1 text-xs font-bold text-ink-900">
+                          Note to customer (optional)
+                          <input
+                            type="text"
+                            name="note"
+                            maxLength={240}
+                            placeholder="e.g. Moved as discussed by phone"
+                            className="min-h-10 rounded-lg border border-court-800/20 bg-white px-2 font-normal outline-none focus:border-court-700"
+                          />
+                        </label>
+                        <p className="text-[11px] leading-5 text-ink-500">
+                          Keeps the {durationHours}-hour duration and the
+                          original price. The customer is emailed the new
+                          schedule.
+                        </p>
+                        <button
+                          type="submit"
+                          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-court-700 px-3 text-xs font-bold text-white transition hover:bg-court-800"
+                        >
+                          Move booking
+                        </button>
+                      </form>
+                    </details>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       ) : null}

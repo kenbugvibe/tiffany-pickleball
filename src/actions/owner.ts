@@ -12,6 +12,7 @@ import {
 import type { CourtBlockSelection } from "@/lib/court-blocks";
 import { getCourtBlockPreview } from "@/lib/data/owner";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
+import { sendBookingRescheduledNotification } from "@/lib/notifications/booking-rescheduled";
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
 import {
   openPlayReturnPath,
@@ -330,6 +331,134 @@ export async function removeCourtBlockAction(formData: FormData) {
   redirect(
     `${courtBlockReturnPath(returnDate)}&unblocked=${encodeURIComponent(data)}`,
   );
+}
+
+export async function rescheduleBookingAction(formData: FormData) {
+  await requireOwner();
+
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const submittedReturnDate = String(formData.get("returnDate") ?? "");
+  const returnDate = isIsoDate(submittedReturnDate)
+    ? submittedReturnDate
+    : getTodayInManila();
+  const courtId = Number(formData.get("courtId"));
+  const newDate = String(formData.get("newDate") ?? "");
+  const startHour = Number(formData.get("startHour"));
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (
+    !UUID_PATTERN.test(bookingId) ||
+    !Number.isInteger(courtId) ||
+    courtId < 1 ||
+    courtId > 32767 ||
+    !isIsoDate(newDate) ||
+    !Number.isInteger(startHour) ||
+    startHour < 8 ||
+    startHour > 23 ||
+    note.length > 240
+  ) {
+    redirect(`${courtBlockReturnPath(returnDate)}&error=invalid-reschedule`);
+  }
+
+  const startsAt = manilaHourToIso(newDate, startHour);
+
+  if (new Date(startsAt).getTime() <= Date.now()) {
+    redirect(`${courtBlockReturnPath(returnDate)}&error=reschedule-in-past`);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("reschedule_booking", {
+    p_booking_id: bookingId,
+    p_court_id: courtId,
+    p_starts_at: startsAt,
+    p_note: note || null,
+  });
+
+  if (error || !data || typeof data !== "object") {
+    const message = error?.message.toLowerCase() ?? "";
+    const errorCode = message.includes("no longer available")
+      ? "reschedule-conflict"
+      : message.includes("operating hours")
+        ? "reschedule-outside-hours"
+        : message.includes("different court or time")
+          ? "reschedule-unchanged"
+          : message.includes("cannot be rescheduled")
+            ? "reschedule-not-allowed"
+            : "reschedule-failed";
+    redirect(`${courtBlockReturnPath(returnDate)}&error=${errorCode}`);
+  }
+
+  const result = data as {
+    booking_reference?: unknown;
+    notification_id?: unknown;
+  };
+  const reference =
+    typeof result.booking_reference === "string"
+      ? result.booking_reference
+      : "updated";
+  const notificationId =
+    typeof result.notification_id === "string" &&
+    UUID_PATTERN.test(result.notification_id)
+      ? result.notification_id
+      : null;
+
+  let emailDelivered = false;
+
+  if (notificationId) {
+    const { data: notification } = await supabase
+      .from("customer_notifications")
+      .select(
+        "id, recipient_name, recipient_email, booking_reference, court_name, starts_at, ends_at, reason, previous_court_name, previous_starts_at, previous_ends_at",
+      )
+      .eq("id", notificationId)
+      .maybeSingle();
+
+    if (notification) {
+      let delivery: { ok: true } | { ok: false; error: string };
+
+      try {
+        delivery = await sendBookingRescheduledNotification(notification);
+      } catch {
+        delivery = {
+          ok: false,
+          error: "The email provider could not be reached.",
+        };
+      }
+
+      const { error: updateError } = await supabase
+        .from("customer_notifications")
+        .update(
+          delivery.ok
+            ? {
+                status: "sent",
+                sent_at: new Date().toISOString(),
+                last_error: null,
+              }
+            : {
+                status: "failed",
+                sent_at: null,
+                last_error: delivery.error.slice(0, 1000),
+              },
+        )
+        .eq("id", notification.id);
+
+      emailDelivered = delivery.ok && !updateError;
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+  revalidatePath("/owner/money");
+  revalidatePath("/my-bookings");
+
+  const successParams = new URLSearchParams({ rescheduled: reference });
+
+  if (!emailDelivered) {
+    successParams.set("rescheduleEmailFailed", "1");
+  }
+
+  redirect(`${courtBlockReturnPath(newDate)}&${successParams.toString()}`);
 }
 
 export async function createOpenPlaySessionAction(formData: FormData) {
