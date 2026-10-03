@@ -387,10 +387,11 @@ export function BookingForm({
           }
           className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-5 font-bold text-court-950 transition hover:bg-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Reserving your court…" : "Continue to GCash"}
+          {pending ? "Booking your court…" : "Book court"}
         </button>
         <p className="mt-3 text-center text-xs text-white/55">
-          Your selected time becomes unavailable to others after you continue.
+          Your court is reserved once you book. Pay through GCash on the next
+          step.
         </p>
       </section>
     </form>
