@@ -22,6 +22,13 @@ const nextConfig: NextConfig = {
             value: "strict-origin-when-cross-origin",
           },
           {
+            // A conservative policy that cannot break Next.js scripts:
+            // no plugins, no <base> hijacking, no framing by other sites.
+            // A full script-src policy needs nonces and browser testing.
+            key: "Content-Security-Policy",
+            value: "object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+          },
+          {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
           },
