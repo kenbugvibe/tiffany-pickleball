@@ -8,7 +8,7 @@ These diagrams describe Tiffany's real court-booking system. They are not school
 2. **Control Flow Diagram** — the order of actions and decisions during booking.
 3. **Data Flow Diagram** — what information moves between users, processes, and storage.
 4. **Entity Relationship Diagram** — how the information is organized in the database.
-5. **System Architecture** — how the browser, application, database, storage, email, Telegram, and GCash work together.
+5. **System Architecture** — how the browser, application, database, storage, email, and GCash work together.
 
 ## 1. Use Case Diagram
 
@@ -59,7 +59,7 @@ These diagrams describe Tiffany's real court-booking system. They are not school
 - Booking selections create a booking hold.
 - The receipt image goes to private storage, while payment details go to the database.
 - Tiffany receives the review information and submits an approval or rejection.
-- Notification events are sent through Resend or Telegram.
+- Customer notification emails are sent through Resend.
 
 ### One-sentence explanation
 
@@ -110,7 +110,6 @@ These diagrams describe Tiffany's real court-booking system. They are not school
 - The Next.js application runs on Vercel.
 - Supabase provides authentication, PostgreSQL, row-level security, and private receipt storage.
 - Resend SMTP sends account confirmation emails.
-- Telegram sends owner booking alerts.
 - GCash is a manual payment method; the application displays payment instructions and collects proof, but it does not directly process the transfer.
 
 ### Security points
@@ -149,4 +148,4 @@ Try answering these without looking at the notes:
 
 ## Suggested presentation script
 
-> Tiffany's Pickleball Court Booking and Management System has two main users: the customer and the owner. The customer checks availability, reserves a court, pays manually through GCash, and uploads proof of payment. The system temporarily holds the selected schedule to prevent double booking. Tiffany reviews the receipt and either confirms or rejects the payment. The application uses Next.js on Vercel and Supabase for authentication, database records, row-level security, and private receipt storage. Resend handles confirmation emails, while Telegram provides owner alerts.
+> Tiffany's Pickleball Court Booking and Management System has two main users: the customer and the owner. The customer checks availability, reserves a court, pays manually through GCash, and uploads proof of payment. The system reserves the selected schedule to prevent double booking. Tiffany reviews the receipt and either confirms or rejects the payment. The application uses Next.js on Vercel and Supabase for authentication, database records, row-level security, and private receipt storage. Resend handles customer emails, and Tiffany sees new receipts on her Today dashboard.
