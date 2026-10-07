@@ -41,10 +41,15 @@ const statusDetails: Record<
     description: "This reservation is cancelled and is no longer active.",
     className: "bg-red-100 text-red-800",
   },
-  refund_pending: {
-    label: "Refund pending",
-    description: "Tiffany is preparing the return of your verified payment.",
+  reschedule_due: {
+    label: "To be rescheduled",
+    description: "This session was cancelled. Your payment carries over, and Tiffany will contact you to move you to another session.",
     className: "bg-orange-100 text-orange-900",
+  },
+  rescheduled: {
+    label: "Rescheduled",
+    description: "Tiffany moved your payment to another session.",
+    className: "bg-violet-100 text-violet-800",
   },
   refunded: {
     label: "Refunded",

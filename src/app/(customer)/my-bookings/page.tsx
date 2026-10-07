@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 
 const historyStatuses = new Set([
   "cancelled",
-  "refund_pending",
+  "reschedule_due",
+  "rescheduled",
   "refunded",
   "no_show",
 ]);
@@ -216,7 +217,7 @@ function MyBookingsContent({
         />
         <BookingSection
           title="Past and history"
-          description="Completed, cancelled, and refunded reservation records."
+          description="Completed, cancelled, and rescheduled reservation records."
           items={history}
           emptyMessage="Past reservations will appear here."
         />

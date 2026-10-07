@@ -8,7 +8,8 @@ export const MONEY_PAYMENT_STATUSES = [
   "unverified",
   "verified",
   "rejected",
-  "refund_pending",
+  "reschedule_due",
+  "rescheduled",
   "refunded",
 ] as const;
 
@@ -41,6 +42,7 @@ export type OwnerMoneyRecord = {
   gcashRef: string;
   verifiedAt: string | null;
   refundedAt: string | null;
+  rescheduledAt: string | null;
   reference: string;
   recordType: MoneyRecordType;
   customerName: string;
@@ -55,8 +57,8 @@ export type OwnerMoneyRecord = {
 export type OwnerMoneySummary = {
   verifiedRevenue: number;
   unverifiedCount: number;
-  refundPendingAmount: number;
-  refundedAmount: number;
+  rescheduleDueAmount: number;
+  rescheduledAmount: number;
   recordCount: number;
 };
 
@@ -70,6 +72,7 @@ type MoneyRecordRpcRow = {
   gcash_ref: string;
   verified_at: string | null;
   refunded_at: string | null;
+  rescheduled_at: string | null;
   reference: string;
   record_type: MoneyRecordType;
   customer_name: string;
@@ -85,8 +88,8 @@ type MoneyRecordRpcRow = {
 type MoneySummaryRpcRow = {
   verified_revenue: number | string;
   unverified_count: number | string;
-  refund_pending_amount: number | string;
-  refunded_amount: number | string;
+  reschedule_due_amount: number | string;
+  rescheduled_amount: number | string;
   record_count: number | string;
 };
 
@@ -146,6 +149,7 @@ function mapRecord(row: MoneyRecordRpcRow): OwnerMoneyRecord {
     gcashRef: row.gcash_ref,
     verifiedAt: row.verified_at,
     refundedAt: row.refunded_at,
+    rescheduledAt: row.rescheduled_at,
     reference: row.reference,
     recordType: row.record_type,
     customerName: row.customer_name,
@@ -196,8 +200,8 @@ export async function getOwnerMoneyData(query: OwnerMoneyQuery) {
     summary: {
       verifiedRevenue: Number(summaryRow?.verified_revenue ?? 0),
       unverifiedCount: Number(summaryRow?.unverified_count ?? 0),
-      refundPendingAmount: Number(summaryRow?.refund_pending_amount ?? 0),
-      refundedAmount: Number(summaryRow?.refunded_amount ?? 0),
+      rescheduleDueAmount: Number(summaryRow?.reschedule_due_amount ?? 0),
+      rescheduledAmount: Number(summaryRow?.rescheduled_amount ?? 0),
       recordCount: Number(summaryRow?.record_count ?? 0),
     } satisfies OwnerMoneySummary,
   };

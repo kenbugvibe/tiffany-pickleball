@@ -44,7 +44,7 @@ export default function PrivacyPage() {
       <h2>How we use it</h2>
       <ul>
         <li>To reserve your court and confirm your place in a session.</li>
-        <li>To verify your GCash payment and process refunds.</li>
+        <li>To verify your GCash payment and reschedule reservations when needed.</li>
         <li>To send you emails about your bookings.</li>
         <li>To contact you if a booking changes.</li>
       </ul>

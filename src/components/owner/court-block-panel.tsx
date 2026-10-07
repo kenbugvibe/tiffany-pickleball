@@ -53,9 +53,13 @@ export function CourtBlockPanel({
     (_, index) => openingHour + index + 1,
   );
   const hasAffectedBookings = Boolean(preview?.affectedBookings.length);
+  const paidBookings =
+    preview?.affectedBookings.filter((booking) => booking.needsReschedule) ??
+    [];
   const cannotConfirm = Boolean(
     preview?.error ||
       preview?.specialConflicts.length ||
+      paidBookings.length ||
       (hasAffectedBookings && !preview?.emailConfigured),
   );
 
@@ -69,9 +73,9 @@ export function CourtBlockPanel({
           Block courts
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-500">
-          Preview the impact before making selected courts unavailable. Existing
-          customer reservations are never cancelled without a second,
-          explicit confirmation.
+          Preview the impact before making selected courts unavailable. Paid
+          bookings must be rescheduled first. Unpaid bookings are only
+          cancelled after a second, explicit confirmation.
         </p>
       </div>
 
@@ -204,6 +208,27 @@ export function CourtBlockPanel({
             </div>
           ) : null}
 
+          {paidBookings.length > 0 ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+              <p className="font-bold">Reschedule paid bookings first.</p>
+              <p className="mt-1">
+                {paidBookings.length === 1
+                  ? "One booking in this period has a payment."
+                  : `${paidBookings.length} bookings in this period have payments.`}{" "}
+                Open the day view and use Reschedule on each one, then preview
+                this block again.
+              </p>
+              <ul className="mt-2 list-disc pl-5">
+                {paidBookings.map((booking) => (
+                  <li key={booking.id}>
+                    {booking.courtName}: {booking.customerName} (
+                    {booking.reference})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {preview.affectedBookings.length > 0 ? (
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
               {preview.affectedBookings.map((booking) => (
@@ -234,8 +259,8 @@ export function CourtBlockPanel({
                   </p>
                   <p className="mt-3 text-xs font-bold capitalize text-ink-500">
                     Payment: {paymentLabel(booking.paymentStatus)}
-                    {booking.refundAmount > 0
-                      ? ` · ${formatPeso(booking.refundAmount)} refund required`
+                    {booking.needsReschedule
+                      ? ` · ${formatPeso(booking.paymentAmount)} paid, reschedule first`
                       : ""}
                   </p>
                 </article>
@@ -298,8 +323,9 @@ export function CourtBlockPanel({
                   {hasAffectedBookings
                     ? ` and the cancellation of ${preview.affectedBookings.length} customer ${preview.affectedBookings.length === 1 ? "booking" : "bookings"}`
                     : ""}
-                  . I understand that verified payments will be marked for
-                  refund.
+                  {hasAffectedBookings
+                    ? ". Those customers have not paid and will be emailed."
+                    : "."}
                 </span>
               </label>
 

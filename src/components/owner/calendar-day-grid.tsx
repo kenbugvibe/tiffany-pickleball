@@ -346,8 +346,8 @@ export function CalendarDayGrid({
                           className="mt-0.5 size-4 accent-red-700"
                         />
                         Cancel this event and reopen the courts. Everyone who
-                        joined is cancelled and emailed, and any payment is
-                        marked for refund in Money.
+                        joined is cancelled and emailed. Paid players are
+                        listed as To reschedule in Money.
                       </label>
                       <button
                         type="submit"
@@ -435,8 +435,8 @@ export function CalendarDayGrid({
                           className="mt-0.5 size-4 accent-red-700"
                         />
                         Cancel this session and reopen all three courts.
-                        Everyone who joined is cancelled and emailed, and any
-                        payment is marked for refund in Money.
+                        Everyone who joined is cancelled and emailed. Paid
+                        players are listed as To reschedule in Money.
                       </label>
                       <button
                         type="submit"

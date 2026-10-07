@@ -63,7 +63,8 @@ export type MyBookingDisplayStatus =
   | "pending_verification"
   | "confirmed"
   | "cancelled"
-  | "refund_pending"
+  | "reschedule_due"
+  | "rescheduled"
   | "refunded"
   | "no_show";
 
@@ -93,7 +94,8 @@ function displayStatus(
   reservationStatus: string,
   paymentStatus: string | null,
 ): MyBookingDisplayStatus {
-  if (paymentStatus === "refund_pending") return "refund_pending";
+  if (paymentStatus === "reschedule_due") return "reschedule_due";
+  if (paymentStatus === "rescheduled") return "rescheduled";
   if (paymentStatus === "refunded") return "refunded";
   if (reservationStatus === "no_show") return "no_show";
   if (reservationStatus === "cancelled" || paymentStatus === "rejected") {

@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
     "GCash reference",
     "Payment received",
     "Verified at",
+    "Rescheduled at",
     "Refunded at",
   ];
   const lines = result.rows.map((record) =>
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
       record.gcashRef,
       csvDate(record.paymentCreatedAt),
       csvDate(record.verifiedAt),
+      csvDate(record.rescheduledAt),
       csvDate(record.refundedAt),
     ]
       .map(csvCell)

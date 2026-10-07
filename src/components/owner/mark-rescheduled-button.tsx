@@ -2,9 +2,9 @@
 
 import { useFormStatus } from "react-dom";
 
-import { markPaymentRefundedAction } from "@/actions/owner";
+import { markPaymentRescheduledAction } from "@/actions/owner";
 
-function RefundSubmitButton() {
+function MarkRescheduledSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
@@ -13,12 +13,12 @@ function RefundSubmitButton() {
       disabled={pending}
       className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-court-800 px-3 text-sm font-bold text-white transition hover:bg-court-700 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
     >
-      {pending ? "Saving…" : "Mark refunded"}
+      {pending ? "Saving…" : "Mark rescheduled"}
     </button>
   );
 }
 
-export function RefundButton({
+export function MarkRescheduledButton({
   paymentId,
   reference,
   returnTo,
@@ -29,11 +29,11 @@ export function RefundButton({
 }) {
   return (
     <form
-      action={markPaymentRefundedAction}
+      action={markPaymentRescheduledAction}
       onSubmit={(event) => {
         if (
           !window.confirm(
-            `Confirm that the GCash refund for ${reference} has already been sent?`,
+            `Confirm that the player for ${reference} has been moved to another session?`,
           )
         ) {
           event.preventDefault();
@@ -42,7 +42,7 @@ export function RefundButton({
     >
       <input type="hidden" name="paymentId" value={paymentId} />
       <input type="hidden" name="returnTo" value={returnTo} />
-      <RefundSubmitButton />
+      <MarkRescheduledSubmitButton />
     </form>
   );
 }

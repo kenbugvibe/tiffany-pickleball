@@ -46,6 +46,13 @@ Migration `202610070020_receipt_rejected_notification.sql` changes
 a receipt. Apply it before deploying the matching app code, then run
 `supabase/tests/receipt_rejected_verification.sql` to confirm it.
 
+Migration `202610070021_reschedule_instead_of_refund.sql` removes refunds. Court
+blocks refuse paid bookings until they are rescheduled, cancelled events mark
+payments `reschedule_due`, and Money gains a Mark rescheduled action. Existing
+`refund_pending` payments become `reschedule_due`. Apply it before deploying
+the matching app code, then run
+`supabase/tests/reschedule_instead_of_refund_verification.sql`.
+
 After applying the hold-removal migrations, this query should return no rows:
 
 ```sql
@@ -74,7 +81,7 @@ order by jobname;
    DKIM, and DMARC, then test signup confirmation and password reset.
 7. Deploy a Vercel preview first. Test customer signup, court booking, Open Play,
    Sunday Unli, receipt upload, owner approval, My Bookings, court blocking,
-   refund marking, Money filters, and CSV export.
+   marking rescheduled payments, Money filters, and CSV export.
 8. Promote the verified preview to production and inspect runtime logs.
 
 ### Google and Facebook sign-in

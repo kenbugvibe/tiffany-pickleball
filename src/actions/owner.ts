@@ -123,7 +123,7 @@ async function deliverReceiptRejectedNotification(
 
 function moneyResultPath(
   rawReturnTo: string,
-  result: { refunded?: string; error?: string },
+  result: { rescheduled?: string; error?: string },
 ) {
   const safeReturnTo =
     rawReturnTo === "/owner/money" ||
@@ -133,39 +133,39 @@ function moneyResultPath(
   const [, rawQuery = ""] = safeReturnTo.split("?", 2);
   const params = new URLSearchParams(rawQuery);
 
-  params.delete("refunded");
+  params.delete("rescheduled");
   params.delete("error");
 
-  if (result.refunded) params.set("refunded", result.refunded);
+  if (result.rescheduled) params.set("rescheduled", result.rescheduled);
   if (result.error) params.set("error", result.error);
 
   const query = params.toString();
   return query ? `/owner/money?${query}` : "/owner/money";
 }
 
-export async function markPaymentRefundedAction(formData: FormData) {
+export async function markPaymentRescheduledAction(formData: FormData) {
   await requireOwner();
 
   const paymentId = String(formData.get("paymentId") ?? "");
   const returnTo = String(formData.get("returnTo") ?? "/owner/money");
 
   if (!UUID_PATTERN.test(paymentId)) {
-    redirect(moneyResultPath(returnTo, { error: "invalid-refund" }));
+    redirect(moneyResultPath(returnTo, { error: "invalid-reschedule" }));
   }
 
   const supabase = await createClient();
   const { data: reference, error } = await supabase.rpc(
-    "mark_payment_refunded",
+    "mark_payment_rescheduled",
     { p_payment_id: paymentId },
   );
 
   if (error || typeof reference !== "string") {
-    redirect(moneyResultPath(returnTo, { error: "refund-failed" }));
+    redirect(moneyResultPath(returnTo, { error: "reschedule-failed" }));
   }
 
   revalidatePath("/owner/money");
   revalidatePath("/owner/today");
-  redirect(moneyResultPath(returnTo, { refunded: reference }));
+  redirect(moneyResultPath(returnTo, { rescheduled: reference }));
 }
 
 function blockPreviewPath(
@@ -245,6 +245,10 @@ export async function createCourtBlockAction(formData: FormData) {
     redirect(blockPreviewPath(selection, "schedule-changed"));
   }
 
+  if (preview.affectedBookings.some((booking) => booking.needsReschedule)) {
+    redirect(blockPreviewPath(selection, "reschedule-paid-first"));
+  }
+
   if (currentIds.length > 0 && !preview.emailConfigured) {
     redirect(blockPreviewPath(selection, "email-not-configured"));
   }
@@ -259,11 +263,12 @@ export async function createCourtBlockAction(formData: FormData) {
   });
 
   if (error || !data || typeof data !== "object") {
-    const errorCode = error?.message
-      ?.toLowerCase()
-      .includes("schedule changed")
+    const message = error?.message?.toLowerCase() ?? "";
+    const errorCode = message.includes("schedule changed")
       ? "schedule-changed"
-      : "block-failed";
+      : message.includes("reschedule paid bookings")
+        ? "reschedule-paid-first"
+        : "block-failed";
     redirect(blockPreviewPath(selection, errorCode));
   }
 
@@ -300,7 +305,7 @@ export async function createCourtBlockAction(formData: FormData) {
     const { data: notifications, error: notificationsError } = await supabase
       .from("customer_notifications")
       .select(
-        "id, recipient_name, recipient_email, booking_reference, court_name, starts_at, ends_at, reason, refund_amount",
+        "id, recipient_name, recipient_email, booking_reference, court_name, starts_at, ends_at, reason",
       )
       .in("id", notificationIds);
 
@@ -314,10 +319,7 @@ export async function createCourtBlockAction(formData: FormData) {
             | { ok: false; error: string };
 
           try {
-            delivery = await sendCourtBlockedNotification({
-              ...notification,
-              refund_amount: Number(notification.refund_amount),
-            });
+            delivery = await sendCourtBlockedNotification(notification);
           } catch {
             delivery = {
               ok: false,

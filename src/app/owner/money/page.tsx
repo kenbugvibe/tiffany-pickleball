@@ -36,7 +36,7 @@ export default async function OwnerMoneyPage({
   const params = await searchParams;
   const query = parseOwnerMoneyQuery(params);
   const data = await getOwnerMoneyData(query);
-  const refunded = first(params.refunded);
+  const rescheduled = first(params.rescheduled);
   const error = first(params.error);
   const currentSearch = ownerMoneyQueryString(query);
   const returnTo = currentSearch
@@ -49,9 +49,9 @@ export default async function OwnerMoneyPage({
     ? `/api/exports/bookings?${exportSearch}`
     : "/api/exports/bookings";
   const errorMessages: Record<string, string> = {
-    "invalid-refund": "That refund record was invalid. Refresh the page and try again.",
-    "refund-failed":
-      "The refund could not be saved. Confirm the Phase 7 Owner Money migration is applied, then try again.",
+    "invalid-reschedule": "That payment record was invalid. Refresh the page and try again.",
+    "reschedule-failed":
+      "The payment could not be marked rescheduled. Confirm the reschedule migration is applied, then try again.",
   };
 
   return (
@@ -65,7 +65,7 @@ export default async function OwnerMoneyPage({
             Money
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-500">
-            Track verified revenue, review payment history, and complete refunds after the money has been returned through GCash.
+            Track verified revenue, review payment history, and mark players rescheduled after moving them from a cancelled session.
           </p>
         </div>
 
@@ -79,9 +79,9 @@ export default async function OwnerMoneyPage({
         ) : null}
       </div>
 
-      {refunded ? (
+      {rescheduled ? (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Payment {refunded} was marked refunded.
+          Payment {rescheduled} was marked rescheduled.
         </div>
       ) : null}
 
@@ -112,7 +112,7 @@ export default async function OwnerMoneyPage({
             <MetricCard
               label="Verified revenue"
               value={formatPeso(data.summary.verifiedRevenue)}
-              detail="Confirmed, non-refunded payments"
+              detail="Verified payments only"
               accent
             />
             <MetricCard
@@ -121,13 +121,13 @@ export default async function OwnerMoneyPage({
               detail="Receipts still needing approval"
             />
             <MetricCard
-              label="Refunds due"
-              value={formatPeso(data.summary.refundPendingAmount)}
-              detail="Return these through GCash"
+              label="To reschedule"
+              value={formatPeso(data.summary.rescheduleDueAmount)}
+              detail="Paid players from cancelled sessions"
             />
             <MetricCard
-              label="Refunded"
-              value={formatPeso(data.summary.refundedAmount)}
+              label="Rescheduled"
+              value={formatPeso(data.summary.rescheduledAmount)}
               detail={`${data.summary.recordCount} total payment records`}
             />
           </section>
@@ -158,8 +158,9 @@ export default async function OwnerMoneyPage({
                 <option value="unverified">Awaiting review</option>
                 <option value="verified">Verified</option>
                 <option value="rejected">Rejected</option>
-                <option value="refund_pending">Refund due</option>
-                <option value="refunded">Refunded</option>
+                <option value="reschedule_due">To reschedule</option>
+                <option value="rescheduled">Rescheduled</option>
+                <option value="refunded">Refunded (past)</option>
               </select>
             </label>
 

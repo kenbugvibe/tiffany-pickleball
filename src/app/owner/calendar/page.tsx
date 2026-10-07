@@ -111,7 +111,7 @@ export default async function OwnerCalendarPage({
   const cancelledPlayers = Number(first(params.cancelledPlayers) ?? 0);
   const cancelledPlayersText =
     cancelledPlayers > 0
-      ? ` ${cancelledPlayers} ${cancelledPlayers === 1 ? "player was" : "players were"} cancelled and emailed; any payments are marked for refund in Money.`
+      ? ` ${cancelledPlayers} ${cancelledPlayers === 1 ? "player was" : "players were"} cancelled and emailed. Any payments are listed as To reschedule in Money.`
       : "";
   const rescheduled = first(params.rescheduled);
   const rescheduleEmailFailed = first(params.rescheduleEmailFailed) === "1";
@@ -124,6 +124,7 @@ export default async function OwnerCalendarPage({
     "schedule-changed": "The schedule changed after your preview. Review the affected bookings again before confirming.",
     "special-conflict": "That period now overlaps a block or special session. Choose another time or manage that schedule first.",
     "email-not-configured": "Customer email must be configured before reservations can be cancelled.",
+    "reschedule-paid-first": "This period has paid bookings. Reschedule them first, then preview the block again.",
     "block-failed": "The court block could not be created. Confirm the Phase 4 migration is applied, then preview it again.",
     "invalid-remove-block": "The selected court block was invalid.",
     "remove-confirmation-required": "Confirm that you want to reopen the blocked period.",

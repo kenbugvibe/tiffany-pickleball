@@ -94,9 +94,9 @@ begin
   if not exists (
     select 1 from public.payments
     where open_play_signup_id = (v_signup ->> 'signup_id')::uuid
-      and status = 'refund_pending'
+      and status = 'reschedule_due'
   ) then
-    raise exception 'FAIL: open-play payment was not marked for refund';
+    raise exception 'FAIL: open-play payment was not marked to reschedule';
   end if;
 
   if exists (

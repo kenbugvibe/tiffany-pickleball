@@ -2,7 +2,7 @@
 
 This is the working project plan. It will be expanded one planning step at a time and updated with Tiffany's decisions before implementation begins.
 
-**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The owner Calendar now supports week/day views, multi-court blocking, and multi-court open-play publishing. Recurring bookings were removed from the product by decision on September 21, 2026. Customer open-play registration, receipt upload, and owner approval were completed and live-tested on September 21, 2026. Sunday-unli owner publishing, customer registration, receipt upload, owner approval, and customer confirmation were completed and live-tested on September 22, 2026. The Phase 7 Owner Money migration, financial summaries, filters, and CSV export were completed and live-tested on September 22, 2026. Customer My Bookings was completed and live-tested with authenticated customer data on September 23, 2026. Phase 8 production hardening, CI verification, and automatic payment-hold expiry were completed on September 23, 2026; the Supabase Cron job was observed running successfully every minute. Refund completion remains untested until an actual refund is due. On October 7, 2026, rejecting a receipt began emailing the customer, closing the last unbuilt part of the approved rejection rule. Telegram owner alerts remain unbuilt until Tiffany supplies a bot token and chat ID.
+**Status:** Approved for phased implementation on September 13, 2026. Phase 1 database foundation was applied and verified successfully on September 13, 2026. Phase 2 application foundation, live Supabase connection, public availability, email/password authentication, ordinary court booking, and the booking-payment migration are complete. Tiffany deferred GCash configuration and the real payment test on September 16, 2026. Phase 3 is complete: the protected owner-console foundation, Today dashboard, atomic payment review, owner authorization, and live owner-account verification were completed on September 16, 2026. The owner Calendar now supports week/day views, multi-court blocking, and multi-court open-play publishing. Recurring bookings were removed from the product by decision on September 21, 2026. Customer open-play registration, receipt upload, and owner approval were completed and live-tested on September 21, 2026. Sunday-unli owner publishing, customer registration, receipt upload, owner approval, and customer confirmation were completed and live-tested on September 22, 2026. The Phase 7 Owner Money migration, financial summaries, filters, and CSV export were completed and live-tested on September 22, 2026. Customer My Bookings was completed and live-tested with authenticated customer data on September 23, 2026. Phase 8 production hardening, CI verification, and automatic payment-hold expiry were completed on September 23, 2026; the Supabase Cron job was observed running successfully every minute. On October 7, 2026, rejecting a receipt began emailing the customer, closing the last unbuilt part of the approved rejection rule. Telegram owner alerts were removed from the product by decision on October 7, 2026. Refunds were also removed that day: paid court bookings must be rescheduled before a court block, and paid players from a cancelled Open Play or Sunday Unli session are moved to another session instead of refunded.
 
 ## Planning checklist
 
@@ -131,8 +131,9 @@ When Tiffany blocks a period containing existing bookings, the system must:
 3. Email the affected customers.
 4. Cancel the affected bookings.
 5. Create the court block.
-6. Mark verified payments as `refund_pending`.
-7. Let Tiffany manually return the money and mark each payment as `refunded`.
+6. Refuse the block while any affected booking has a submitted payment. Tiffany reschedules paid bookings first; only unpaid bookings are cancelled.
+
+Refunds were removed by decision on October 7, 2026. When Tiffany cancels an Open Play or Sunday Unli session, each paid player is marked `reschedule_due`. Tiffany moves them to another session and marks the payment `rescheduled` in Money.
 
 #### Recurring bookings
 
@@ -242,13 +243,13 @@ Items marked **Confident** are supported by the build specification, reference d
 - **Confident —** The owner console uses three destinations: Today, Calendar, and Money.
 - **Confident —** Calendar opens in week view, and selecting a day opens the detailed hour-by-court grid.
 - **Confident —** The full booking table, filters, and CSV export live on Money, while the short receipt-verification queue remains on Today.
-- **Confident —** Tiffany can block an occupied period. The system first shows affected bookings and asks for confirmation, then emails the customers, cancels the bookings, creates the block, and marks verified payments as refund pending until Tiffany manually completes each refund.
+- **Confident —** Tiffany can block an occupied period. The system first shows affected bookings and asks for confirmation, then emails the customers, cancels the bookings, and creates the block. Paid bookings must be rescheduled before the block is allowed. Refunds are not offered.
 - **Confident —** The alternative horizontal lanes and drag-to-move/resize behavior are excluded initially and may be considered later.
 - **Confident —** Walk-in bookings and recurring bookings are removed. Tiffany can publish open play and block courts.
 
 ### Notifications
 
-- **Confident —** Tiffany receives Telegram alerts for new receipt uploads and cancellations. A capacity alert is excluded while open play has no enforced capacity.
+- **Confident —** Telegram owner alerts are removed from the product by decision on October 7, 2026. Tiffany sees new receipts on the owner Today page.
 - **Confident —** Customers receive email through Resend. Customer SMS notifications are excluded.
 - **Guessing —** The two-hour reminder for an unverified receipt is excluded unless Tiffany approves it and selects a notification channel.
 - **Confident —** Rejecting a receipt cancels and releases the reservation. Receipt resubmission is not included initially and remains an optional future feature.
@@ -264,7 +265,7 @@ Items marked **Confident** are supported by the build specification, reference d
 
 ### Technical and data handling
 
-- **Confident —** The stack is Next.js App Router with TypeScript, Supabase, Vercel, Resend, Telegram, and Tailwind CSS.
+- **Confident —** The stack is Next.js App Router with TypeScript, Supabase, Vercel, Resend, and Tailwind CSS.
 - **Confident —** The app uses the Supabase JavaScript client directly, plain React state, and no ORM, component library, or separate state-management library.
 - **Confident —** Rates and availability rules live in the database instead of being duplicated as component constants.
 - **Confident —** Money is stored as whole Philippine pesos, never floating-point values.
@@ -286,7 +287,7 @@ Phase 1 creates and tests the database. The items below are divided into true Ph
 - [x] **Sunday unli payment:** Every participant uploads an individual GCash receipt for manual verification.
 - [x] **Regular open-play duration:** Tiffany may publish multi-hour events using one-hour increments; PHP 120 covers the complete event.
 - [x] **Rejected receipt behavior:** Rejection cancels and releases the reservation immediately and emails the customer.
-- [x] **Court-blocking transaction:** Show affected bookings, confirm, email customers, cancel bookings, create the block, and track manual refunds through refund-pending and refunded states.
+- [x] **Court-blocking transaction:** Show affected bookings, confirm, email customers, cancel bookings, create the block, and require paid bookings to be rescheduled first (refunds removed October 7, 2026).
 - [x] **Walk-ins:** Remove walk-in bookings and their payment workflow entirely.
 - [x] **Recurring bookings:** Removed from the approved product scope on September 21, 2026.
 - [x] **Public booking reference:** Use `TPC-YYMM-####`.
@@ -336,10 +337,9 @@ The following known values are enough to prepare safe sample rows:
 - Exact court address, map link, and public contact number
 - Final logo files and court photographs
 - Resend account, verified sender/domain, and API key
-- Telegram bot token and Tiffany's Telegram chat ID
 - Google and Facebook OAuth application credentials
 - Vercel account, project access, and final domain name
-- Final cancellation/refund policy and customer-facing terms
+- Final cancellation/rescheduling policy and customer-facing terms
 
 These later-phase credentials and assets should not delay the database schema work.
 
@@ -437,14 +437,14 @@ tiffany-pickleball/
 - `src/app/owner/` — Protected owner console; the proposed routes follow Today, Calendar, and Money.
 - `src/app/api/cron/` — Authenticated Vercel Cron endpoints for expired payment holds.
 - `src/app/api/exports/` — Server-generated CSV downloads for the Money screen.
-- `src/actions/` — Server Actions for UI-triggered booking, open-play, payment-review, blocking, refund, and owner mutations.
+- `src/actions/` — Server Actions for UI-triggered booking, open-play, payment-review, blocking, rescheduling, and owner mutations.
 - `src/components/booking/` — Customer booking-step components and availability controls.
 - `src/components/owner/` — Court timelines, calendars, receipt review, and financial reporting components.
 - `src/components/shared/` — Cross-feature navigation, branding, status, and empty-state components.
 - `src/components/ui/` — Small project-owned controls such as buttons, fields, dialogs, and badges; no component library.
 - `src/lib/supabase/` — Browser, server, and privileged server-only Supabase clients.
 - `src/lib/data/` — Reusable server-side database reads for availability, bookings, and owner reports.
-- `src/lib/notifications/` — Server-only Resend and Telegram integrations.
+- `src/lib/notifications/` — Server-only Resend customer email integrations.
 - `src/lib/dates.ts` — `Asia/Manila` date, time-slot, and timezone helpers.
 - `src/lib/money.ts` — Whole-peso calculations and `en-PH` currency formatting.
 - `src/lib/validation.ts` — Shared validation rules for booking and owner inputs.

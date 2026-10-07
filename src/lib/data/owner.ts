@@ -144,7 +144,8 @@ export type OwnerCourtBlockConflict = {
   status: string;
   paymentStatus: string | null;
   paymentAmount: number;
-  refundAmount: number;
+  /** A submitted payment means the booking must be rescheduled, not cancelled. */
+  needsReschedule: boolean;
 };
 
 export type OwnerCourtBlockSpecialConflict = {
@@ -769,10 +770,9 @@ export async function getCourtBlockPreview(
         status: booking.status,
         paymentStatus: payment?.status ?? null,
         paymentAmount: Number(payment?.amount ?? 0),
-        refundAmount:
-          payment && ["verified", "refund_pending"].includes(payment.status)
-            ? Number(payment.amount)
-            : 0,
+        needsReschedule: Boolean(
+          payment && ["verified", "unverified"].includes(payment.status),
+        ),
       } satisfies OwnerCourtBlockConflict;
     });
   const specialConflicts = conflicts

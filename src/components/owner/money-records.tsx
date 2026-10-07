@@ -1,4 +1,4 @@
-import { RefundButton } from "@/components/owner/refund-button";
+import { MarkRescheduledButton } from "@/components/owner/mark-rescheduled-button";
 import type {
   MoneyPaymentStatus,
   MoneyRecordType,
@@ -20,7 +20,8 @@ const paymentStatusLabels: Record<MoneyPaymentStatus, string> = {
   unverified: "Awaiting review",
   verified: "Verified",
   rejected: "Rejected",
-  refund_pending: "Refund due",
+  reschedule_due: "To reschedule",
+  rescheduled: "Rescheduled",
   refunded: "Refunded",
 };
 
@@ -28,7 +29,8 @@ const paymentStatusClasses: Record<MoneyPaymentStatus, string> = {
   unverified: "bg-amber-100 text-amber-900",
   verified: "bg-emerald-100 text-emerald-800",
   rejected: "bg-red-100 text-red-800",
-  refund_pending: "bg-orange-100 text-orange-900",
+  reschedule_due: "bg-orange-100 text-orange-900",
+  rescheduled: "bg-violet-100 text-violet-800",
   refunded: "bg-sky-100 text-sky-800",
 };
 
@@ -141,8 +143,8 @@ export function MoneyRecords({
 
                 <div className="flex flex-col gap-3 border-t border-court-800/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <StatusBadge status={record.paymentStatus} />
-                  {record.paymentStatus === "refund_pending" ? (
-                    <RefundButton
+                  {record.paymentStatus === "reschedule_due" ? (
+                    <MarkRescheduledButton
                       paymentId={record.paymentId}
                       reference={record.reference}
                       returnTo={returnTo}
@@ -210,8 +212,8 @@ export function MoneyRecords({
                       </p>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      {record.paymentStatus === "refund_pending" ? (
-                        <RefundButton
+                      {record.paymentStatus === "reschedule_due" ? (
+                        <MarkRescheduledButton
                           paymentId={record.paymentId}
                           reference={record.reference}
                           returnTo={returnTo}

@@ -25,13 +25,23 @@ function confirmationState(
     };
   }
 
-  if (paymentStatus === "refund_pending") {
+  if (paymentStatus === "reschedule_due") {
     return {
-      eyebrow: "Refund in progress",
-      headline: "Your booking was cancelled.",
-      description: "Tiffany is preparing the return of your verified payment.",
-      label: "Refund pending",
+      eyebrow: "To be rescheduled",
+      headline: "Your booking needs a new time.",
+      description: "Your payment carries over. Tiffany will contact you to choose a new schedule.",
+      label: "To be rescheduled",
       statusClass: "text-orange-700",
+    };
+  }
+
+  if (paymentStatus === "rescheduled") {
+    return {
+      eyebrow: "Rescheduled",
+      headline: "Your payment was moved.",
+      description: "Tiffany moved your payment to a new schedule.",
+      label: "Rescheduled",
+      statusClass: "text-violet-700",
     };
   }
 

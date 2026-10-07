@@ -37,7 +37,7 @@ export default function DataDeletionPage() {
       <p>
         We delete your account, name, email address, mobile number, and
         uploaded GCash receipts. We may keep basic records of past payments
-        when we need them for accounting or refunds.
+        when we need them for accounting.
       </p>
 
       <h2>Removing Facebook access</h2>
