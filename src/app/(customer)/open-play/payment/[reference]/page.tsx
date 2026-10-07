@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { OpenPlayShell } from "@/components/booking/open-play-shell";
 import { ReceiptUploadForm } from "@/components/booking/receipt-upload-form";
+import { GCASH_QR_SIZE, gcashQrPath } from "@/lib/gcash";
 import { getCustomerOpenPlaySignup } from "@/lib/data/open-play";
 import { manilaScheduleFormatter, manilaTimeFormatter } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
@@ -31,11 +32,7 @@ export default async function OpenPlayPaymentPage({
   const paymentUnavailable = signup.status !== "pending";
   const gcashName = process.env.GCASH_ACCOUNT_NAME?.trim() ?? "";
   const gcashNumber = process.env.GCASH_MOBILE_NUMBER?.trim() ?? "";
-  const configuredQrPath = process.env.GCASH_QR_IMAGE_PATH?.trim() ?? "";
-  const qrPath =
-    configuredQrPath.startsWith("/") && !configuredQrPath.startsWith("//")
-      ? configuredQrPath
-      : "";
+  const qrPath = gcashQrPath();
   const paymentConfigured = Boolean(gcashName && gcashNumber);
 
   return (
@@ -55,8 +52,8 @@ export default async function OpenPlayPaymentPage({
                 <Image
                   src={qrPath}
                   alt="Tiffany's GCash QR code"
-                  width={640}
-                  height={640}
+                  width={GCASH_QR_SIZE.width}
+                  height={GCASH_QR_SIZE.height}
                   className="h-auto w-full"
                   priority
                 />

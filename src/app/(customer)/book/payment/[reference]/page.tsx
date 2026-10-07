@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { BookingShell } from "@/components/booking/booking-shell";
 import { ReceiptUploadForm } from "@/components/booking/receipt-upload-form";
+import { GCASH_QR_SIZE, gcashQrPath } from "@/lib/gcash";
 import { getCustomerBooking } from "@/lib/data/bookings";
 import {
   manilaScheduleFormatter,
@@ -35,11 +36,7 @@ export default async function BookingPaymentPage({
   const paymentUnavailable = booking.status !== "pending";
   const gcashName = process.env.GCASH_ACCOUNT_NAME?.trim() ?? "";
   const gcashNumber = process.env.GCASH_MOBILE_NUMBER?.trim() ?? "";
-  const configuredQrPath = process.env.GCASH_QR_IMAGE_PATH?.trim() ?? "";
-  const qrPath =
-    configuredQrPath.startsWith("/") && !configuredQrPath.startsWith("//")
-      ? configuredQrPath
-      : "";
+  const qrPath = gcashQrPath();
   const paymentConfigured = Boolean(gcashName && gcashNumber);
 
   return (
@@ -59,8 +56,8 @@ export default async function BookingPaymentPage({
                 <Image
                   src={qrPath}
                   alt="Tiffany's GCash QR code"
-                  width={640}
-                  height={640}
+                  width={GCASH_QR_SIZE.width}
+                  height={GCASH_QR_SIZE.height}
                   className="h-auto w-full"
                   priority
                 />
