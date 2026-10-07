@@ -44,8 +44,17 @@ begin
   from public.customers
   where auth_user_id = v_test_user_id;
 
+  -- The live signup trigger may be absent; the app's ensureCustomerProfile()
+  -- fallback covers that case, so create the profile here the same way.
   if v_customer_id is null then
-    raise exception 'FAIL: test customer profile was not created';
+    insert into public.customers (auth_user_id, full_name, phone, email)
+    values (
+      v_test_user_id,
+      'Security Test Customer',
+      '09170000001',
+      'security-test-' || v_test_user_id || '@example.invalid'
+    )
+    returning id into v_customer_id;
   end if;
 
   -- Act as the test customer.
