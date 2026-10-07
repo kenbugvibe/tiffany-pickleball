@@ -107,19 +107,8 @@ export type OwnerPendingPayment = ReviewParent & {
   gcashRef: string;
   createdAt: string;
   receiptUrl: string | null;
-};
-
-export type OwnerUpcomingBooking = {
-  id: string;
-  reference: string;
-  courtName: string;
-  startsAt: string;
-  endsAt: string;
-  customerName: string;
-  status: string;
-  amount: number;
-  paymentId: string | null;
-  paymentStatus: string | null;
+  /** Only ordinary court bookings can be moved with the Reschedule tool. */
+  isCourtBooking: boolean;
 };
 
 export type OwnerCalendarDaySummary = {
@@ -300,7 +289,6 @@ export async function getOwnerTodayData() {
   const supabase = await createClient();
   const today = getTodayInManila();
   const bounds = manilaDayBounds(today);
-  const nowIso = new Date().toISOString();
 
   const [
     courtsResult,
@@ -308,7 +296,6 @@ export async function getOwnerTodayData() {
     bookingsResult,
     revenueResult,
     paymentsResult,
-    upcomingResult,
   ] = await Promise.all([
     supabase
       .from("courts")
@@ -338,16 +325,6 @@ export async function getOwnerTodayData() {
       )
       .eq("status", "unverified")
       .order("created_at"),
-    supabase
-      .from("bookings")
-      .select(
-        "id, reference, starts_at, ends_at, status, total_amount, customers(full_name, phone, email), courts(name), payments(id, status)",
-      )
-      .in("kind", ["regular", "recurring"])
-      .not("status", "in", "(cancelled,no_show)")
-      .gte("starts_at", nowIso)
-      .order("starts_at")
-      .limit(5),
   ]);
 
   const requiredResults = [
@@ -356,7 +333,6 @@ export async function getOwnerTodayData() {
     bookingsResult,
     revenueResult,
     paymentsResult,
-    upcomingResult,
   ];
 
   if (requiredResults.some((result) => result.error)) {
@@ -374,7 +350,6 @@ export async function getOwnerTodayData() {
   };
   const bookingRows = (bookingsResult.data ?? []) as unknown as BookingRow[];
   const paymentRows = (paymentsResult.data ?? []) as PaymentRow[];
-  const upcomingRows = (upcomingResult.data ?? []) as unknown as BookingRow[];
 
   const timeline = bookingRows.map((booking) => {
     const customer = one(booking.customers);
@@ -456,29 +431,11 @@ export async function getOwnerTodayData() {
           gcashRef: payment.gcash_ref,
           createdAt: payment.created_at,
           receiptUrl: signedReceipt.data?.signedUrl ?? null,
+          isCourtBooking: Boolean(payment.booking_id),
         } satisfies OwnerPendingPayment;
       }),
     )
   ).filter((payment): payment is OwnerPendingPayment => payment !== null);
-
-  const upcoming = upcomingRows.map((booking) => {
-    const customer = one(booking.customers);
-    const court = one(booking.courts);
-    const payment = one(booking.payments ?? null);
-
-    return {
-      id: booking.id,
-      reference: booking.reference,
-      courtName: court?.name ?? "Court",
-      startsAt: booking.starts_at,
-      endsAt: booking.ends_at,
-      customerName: customer?.full_name ?? "Customer",
-      status: booking.status,
-      amount: booking.total_amount,
-      paymentId: payment?.id ?? null,
-      paymentStatus: payment?.status ?? null,
-    } satisfies OwnerUpcomingBooking;
-  });
 
   return {
     today,
@@ -498,7 +455,6 @@ export async function getOwnerTodayData() {
           : 0,
     },
     pendingPayments,
-    upcoming,
   };
 }
 

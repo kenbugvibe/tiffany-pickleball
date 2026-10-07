@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { MetricCard } from "@/components/owner/metric-card";
 import { PendingPayments } from "@/components/owner/pending-payments";
 import { TodayTimeline } from "@/components/owner/today-timeline";
-import { UpcomingBookings } from "@/components/owner/upcoming-bookings";
 import { getOwnerTodayData } from "@/lib/data/owner";
 import { formatPeso } from "@/lib/money";
 
@@ -110,12 +109,11 @@ export default async function OwnerTodayPage({
         />
       </div>
 
-      <div className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)] xl:items-start">
+      <div className="mt-7">
         <PendingPayments
           payments={data.pendingPayments}
           total={data.metrics.pendingReceiptCount}
         />
-        <UpcomingBookings bookings={data.upcoming} />
       </div>
     </div>
   );

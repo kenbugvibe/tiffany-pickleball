@@ -1,7 +1,16 @@
+import Link from "next/link";
+
 import { ReviewButtons } from "@/components/owner/review-buttons";
 import type { OwnerPendingPayment } from "@/lib/data/owner";
-import { manilaScheduleFormatter } from "@/lib/dates";
+import { manilaScheduleFormatter, toManilaIsoDate } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
+
+/** The calendar day view is where each court booking's Reschedule form lives. */
+function calendarDayHref(startsAt: string) {
+  const day = toManilaIsoDate(new Date(startsAt));
+
+  return `/owner/calendar?week=${day}&day=${day}`;
+}
 
 export function PendingPayments({
   payments,
@@ -103,6 +112,14 @@ export function PendingPayments({
                   </p>
                 )}
                 <ReviewButtons paymentId={payment.id} />
+                {payment.isCourtBooking ? (
+                  <Link
+                    href={calendarDayHref(payment.startsAt)}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-court-800/20 px-3 text-sm font-bold text-court-800 transition hover:bg-court-800/5"
+                  >
+                    Reschedule
+                  </Link>
+                ) : null}
               </div>
             </article>
           ))}
