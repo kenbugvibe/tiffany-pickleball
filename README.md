@@ -59,6 +59,11 @@ payment inserts, adds text length limits, and gives Tiffany a Cancel unpaid
 action in the calendar day view. Apply it, then run
 `supabase/tests/security_hardening_verification.sql`.
 
+Migration `202610070023_query_performance.sql` speeds up availability, My
+Bookings, and Today's revenue, and adds signup indexes. The app depends on its
+new functions, so apply it before deploying, then run
+`supabase/tests/query_performance_verification.sql`.
+
 After applying the hold-removal migrations, this query should return no rows:
 
 ```sql

@@ -164,6 +164,17 @@ function one<T>(value: OneOrMany<T>) {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+/**
+ * Bookings never cross midnight, so anything overlapping a period starts no
+ * earlier than a day before it. This lower bound lets the starts_at index
+ * skip older history instead of scanning every past booking.
+ */
+function earliestOverlappingStart(periodStartIso: string) {
+  return new Date(
+    new Date(periodStartIso).getTime() - 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
+
 function manilaDayBounds(day: string) {
   const start = new Date(`${day}T00:00:00+08:00`);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
@@ -176,71 +187,81 @@ function manilaDayBounds(day: string) {
   };
 }
 
-async function getReviewParent(
-  payment: PaymentRow,
-): Promise<ReviewParent | null> {
-  const supabase = await createClient();
+type EmbeddedCustomer = OneOrMany<CustomerRelation>;
 
+type PendingPaymentRow = PaymentRow & {
+  bookings: OneOrMany<{
+    reference: string;
+    starts_at: string;
+    ends_at: string;
+    customer_note: string | null;
+    courts: OneOrMany<CourtRelation>;
+    customers: EmbeddedCustomer;
+  }>;
+  open_play_signups: OneOrMany<{
+    reference: string;
+    customers: EmbeddedCustomer;
+    open_play_sessions: OneOrMany<{
+      title: string;
+      bookings: OneOrMany<{
+        starts_at: string;
+        ends_at: string;
+        courts: OneOrMany<CourtRelation>;
+      }>;
+    }>;
+  }>;
+  sunday_unli_signups: OneOrMany<{
+    reference: string;
+    customers: EmbeddedCustomer;
+    sunday_unli_sessions: OneOrMany<{ starts_at: string; ends_at: string }>;
+  }>;
+};
+
+/** Embedded with the payment so the queue loads in one query. */
+const PENDING_PAYMENT_SELECT =
+  "id, booking_id, open_play_signup_id, sunday_unli_signup_id, amount, gcash_ref, receipt_path, created_at, " +
+  "bookings(reference, starts_at, ends_at, customer_note, courts(name), customers(full_name, phone, email)), " +
+  "open_play_signups(reference, customers(full_name, phone, email), open_play_sessions(title, bookings(starts_at, ends_at, courts(name)))), " +
+  "sunday_unli_signups(reference, customers(full_name, phone, email), sunday_unli_sessions(starts_at, ends_at))";
+
+function customerFields(customers: EmbeddedCustomer) {
+  const customer = one(customers);
+
+  return {
+    customerName: customer?.full_name ?? "Customer",
+    customerPhone: customer?.phone ?? "Not available",
+    customerEmail: customer?.email ?? "Not available",
+  };
+}
+
+function reviewParentFromRow(payment: PendingPaymentRow): ReviewParent | null {
   if (payment.booking_id) {
-    const { data, error } = await supabase
-      .from("bookings")
-      .select(
-        "reference, starts_at, ends_at, customer_note, courts(name), customers(full_name, phone, email)",
-      )
-      .eq("id", payment.booking_id)
-      .maybeSingle();
+    const booking = one(payment.bookings);
 
-    if (error || !data) return null;
-
-    const customer = one(data.customers as OneOrMany<CustomerRelation>);
-    const court = one(data.courts as OneOrMany<CourtRelation>);
+    if (!booking) return null;
 
     return {
-      reference: data.reference,
-      customerName: customer?.full_name ?? "Customer",
-      customerPhone: customer?.phone ?? "Not available",
-      customerEmail: customer?.email ?? "Not available",
-      courtName: court?.name ?? "Court",
-      startsAt: data.starts_at,
-      endsAt: data.ends_at,
-      note: data.customer_note,
+      reference: booking.reference,
+      ...customerFields(booking.customers),
+      courtName: one(booking.courts)?.name ?? "Court",
+      startsAt: booking.starts_at,
+      endsAt: booking.ends_at,
+      note: booking.customer_note,
       typeLabel: "Court booking",
     };
   }
 
   if (payment.open_play_signup_id) {
-    const { data, error } = await supabase
-      .from("open_play_signups")
-      .select(
-        "reference, customers(full_name, phone, email), open_play_sessions(title, bookings(starts_at, ends_at, courts(name)))",
-      )
-      .eq("id", payment.open_play_signup_id)
-      .maybeSingle();
-
-    if (error || !data) return null;
-
-    const customer = one(data.customers as OneOrMany<CustomerRelation>);
-    const session = one(
-      data.open_play_sessions as OneOrMany<{
-        title: string;
-        bookings: OneOrMany<{
-          starts_at: string;
-          ends_at: string;
-          courts: OneOrMany<CourtRelation>;
-        }>;
-      }>,
-    );
+    const signup = one(payment.open_play_signups);
+    const session = one(signup?.open_play_sessions ?? null);
     const booking = one(session?.bookings ?? null);
-    const court = one(booking?.courts ?? null);
 
-    if (!booking) return null;
+    if (!signup || !booking) return null;
 
     return {
-      reference: data.reference,
-      customerName: customer?.full_name ?? "Customer",
-      customerPhone: customer?.phone ?? "Not available",
-      customerEmail: customer?.email ?? "Not available",
-      courtName: court?.name ?? "Court",
+      reference: signup.reference,
+      ...customerFields(signup.customers),
+      courtName: one(booking.courts)?.name ?? "Court",
       startsAt: booking.starts_at,
       endsAt: booking.ends_at,
       note: null,
@@ -249,31 +270,14 @@ async function getReviewParent(
   }
 
   if (payment.sunday_unli_signup_id) {
-    const { data, error } = await supabase
-      .from("sunday_unli_signups")
-      .select(
-        "reference, customers(full_name, phone, email), sunday_unli_sessions(starts_at, ends_at)",
-      )
-      .eq("id", payment.sunday_unli_signup_id)
-      .maybeSingle();
+    const signup = one(payment.sunday_unli_signups);
+    const session = one(signup?.sunday_unli_sessions ?? null);
 
-    if (error || !data) return null;
-
-    const customer = one(data.customers as OneOrMany<CustomerRelation>);
-    const session = one(
-      data.sunday_unli_sessions as OneOrMany<{
-        starts_at: string;
-        ends_at: string;
-      }>,
-    );
-
-    if (!session) return null;
+    if (!signup || !session) return null;
 
     return {
-      reference: data.reference,
-      customerName: customer?.full_name ?? "Customer",
-      customerPhone: customer?.phone ?? "Not available",
-      customerEmail: customer?.email ?? "Not available",
+      reference: signup.reference,
+      ...customerFields(signup.customers),
       courtName: "All courts",
       startsAt: session.starts_at,
       endsAt: session.ends_at,
@@ -314,17 +318,15 @@ export async function getOwnerTodayData() {
       .select(
         "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status), payments(id, status)",
       )
+      .gte("starts_at", earliestOverlappingStart(bounds.startIso))
       .lt("starts_at", bounds.endIso)
       .gt("ends_at", bounds.startIso)
       .not("status", "in", "(cancelled,no_show)")
       .order("starts_at"),
-    supabase.from("revenue_daily").select("collected").eq("day", today).maybeSingle(),
+    supabase.rpc("get_owner_collected_for_day", { p_day: today }),
     supabase
       .from("payments")
-      .select(
-        "id, booking_id, open_play_signup_id, sunday_unli_signup_id, amount, gcash_ref, receipt_path, created_at",
-        { count: "exact" },
-      )
+      .select(PENDING_PAYMENT_SELECT, { count: "exact" })
       .eq("status", "unverified")
       .order("created_at"),
   ]);
@@ -351,7 +353,7 @@ export async function getOwnerTodayData() {
     closing_hour: number;
   };
   const bookingRows = (bookingsResult.data ?? []) as unknown as BookingRow[];
-  const paymentRows = (paymentsResult.data ?? []) as PaymentRow[];
+  const paymentRows = (paymentsResult.data ?? []) as unknown as PendingPaymentRow[];
 
   const timeline = bookingRows.map((booking) => {
     const customer = one(booking.customers);
@@ -415,30 +417,40 @@ export async function getOwnerTodayData() {
     (settings.closing_hour - settings.opening_hour) *
     60;
 
-  const pendingPayments = (
-    await Promise.all(
-      paymentRows.map(async (payment) => {
-        const [parent, signedReceipt] = await Promise.all([
-          getReviewParent(payment),
-          supabase.storage
-            .from("payment-receipts")
-            .createSignedUrl(payment.receipt_path, 5 * 60),
-        ]);
+  // One batched request signs every receipt link in the queue.
+  const signedReceipts =
+    paymentRows.length > 0
+      ? await supabase.storage
+          .from("payment-receipts")
+          .createSignedUrls(
+            paymentRows.map((payment) => payment.receipt_path),
+            5 * 60,
+          )
+      : { data: [], error: null };
+  const signedUrlByPath = new Map(
+    (signedReceipts.data ?? []).map((signed) => [
+      signed.path,
+      signed.error ? null : signed.signedUrl,
+    ]),
+  );
 
-        if (!parent) return null;
+  const pendingPayments = paymentRows
+    .map((payment) => {
+      const parent = reviewParentFromRow(payment);
 
-        return {
-          ...parent,
-          id: payment.id,
-          amount: payment.amount,
-          gcashRef: payment.gcash_ref,
-          createdAt: payment.created_at,
-          receiptUrl: signedReceipt.data?.signedUrl ?? null,
-          isCourtBooking: Boolean(payment.booking_id),
-        } satisfies OwnerPendingPayment;
-      }),
-    )
-  ).filter((payment): payment is OwnerPendingPayment => payment !== null);
+      if (!parent) return null;
+
+      return {
+        ...parent,
+        id: payment.id,
+        amount: payment.amount,
+        gcashRef: payment.gcash_ref,
+        createdAt: payment.created_at,
+        receiptUrl: signedUrlByPath.get(payment.receipt_path) ?? null,
+        isCourtBooking: Boolean(payment.booking_id),
+      } satisfies OwnerPendingPayment;
+    })
+    .filter((payment): payment is OwnerPendingPayment => payment !== null);
 
   return {
     today,
@@ -447,7 +459,7 @@ export async function getOwnerTodayData() {
     closingHour: settings.closing_hour,
     timeline,
     metrics: {
-      collected: Number(revenueResult.data?.collected ?? 0),
+      collected: Number(revenueResult.data ?? 0),
       bookingCount: bookingRows.filter((booking) =>
         ["regular", "recurring"].includes(booking.kind),
       ).length,
@@ -489,6 +501,7 @@ export async function getOwnerCalendarData(
       .select(
         "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status), payments(id, status)",
       )
+      .gte("starts_at", earliestOverlappingStart(weekBounds.startIso))
       .lt("starts_at", weekEnd.startIso)
       .gt("ends_at", weekBounds.startIso)
       .not("status", "in", "(cancelled,no_show)")
@@ -659,6 +672,7 @@ export async function getCourtBlockPreview(
       )
       .in("court_id", selection.courtIds)
       .neq("status", "cancelled")
+      .gte("starts_at", earliestOverlappingStart(startsAt))
       .lt("starts_at", endsAt)
       .gt("ends_at", startsAt)
       .order("court_id")

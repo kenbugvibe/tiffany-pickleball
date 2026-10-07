@@ -20,22 +20,31 @@ export type AvailabilityRow = {
   entry_price: number | null;
 };
 
+/**
+ * Loads availability for consecutive days in one database call.
+ * `days` must be sorted and consecutive (a single day or a week).
+ */
 export async function getAvailabilityForDays(days: string[]) {
-  const supabase = await createClient();
-
-  const results = await Promise.all(
-    days.map(async (day) => {
-      const { data, error } = await supabase.rpc("get_court_availability", {
-        p_day: day,
-      });
-
-      if (error) {
-        throw new Error(`Could not load court availability for ${day}.`);
-      }
-
-      return [day, (data ?? []) as AvailabilityRow[]] as const;
-    }),
+  const byDay: Record<string, AvailabilityRow[]> = Object.fromEntries(
+    days.map((day) => [day, [] as AvailabilityRow[]]),
   );
 
-  return Object.fromEntries(results) as Record<string, AvailabilityRow[]>;
+  if (days.length === 0) return byDay;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_court_availability_range", {
+    p_from: days[0],
+    p_days: days.length,
+  });
+
+  if (error) {
+    throw new Error("Could not load court availability.");
+  }
+
+  for (const row of (data ?? []) as Array<AvailabilityRow & { day: string }>) {
+    const { day, ...availability } = row;
+    byDay[day]?.push(availability);
+  }
+
+  return byDay;
 }

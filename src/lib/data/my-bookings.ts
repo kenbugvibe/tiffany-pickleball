@@ -38,21 +38,6 @@ type SignupRow = {
   payments: OneOrMany<PaymentRelation>;
 };
 
-type OpenPlaySessionRow = {
-  session_id: string;
-  title: string;
-  starts_at: string;
-  ends_at: string;
-  court_names: string[];
-};
-
-type SundayUnliSessionRow = {
-  session_id: string;
-  starts_at: string;
-  ends_at: string;
-  court_names: string[];
-};
-
 export type MyBookingKind =
   | "court_booking"
   | "open_play"
@@ -210,42 +195,43 @@ export async function getMyBookingsData() {
   const openPlayRows = (openPlayResult.data ?? []) as unknown as SignupRow[];
   const sundayUnliRows = (sundayUnliResult.data ?? []) as unknown as SignupRow[];
   const evaluatedAt = Date.now();
-  const openPlaySessionIds = Array.from(
-    new Set(openPlayRows.map((signup) => signup.session_id)),
-  );
-  const sundayUnliSessionIds = Array.from(
-    new Set(sundayUnliRows.map((signup) => signup.session_id)),
-  );
-  const [openPlaySessions, sundayUnliSessions] = await Promise.all([
-    Promise.all(
-      openPlaySessionIds.map(async (sessionId) => {
-        const result = await supabase.rpc("get_open_play_session", {
-          p_session_id: sessionId,
-        });
-        const row = Array.isArray(result.data)
-          ? (result.data[0] as OpenPlaySessionRow | undefined)
-          : undefined;
+  // One call returns every event session this customer registered for,
+  // including cancelled ones, so past registrations always display.
+  const hasEvents = openPlayRows.length > 0 || sundayUnliRows.length > 0;
+  const sessionsResult = hasEvents
+    ? await supabase.rpc("get_my_event_sessions")
+    : { data: [], error: null };
 
-        return { sessionId, row, error: result.error };
-      }),
-    ),
-    Promise.all(
-      sundayUnliSessionIds.map(async (sessionId) => {
-        const result = await supabase.rpc("get_sunday_unli_session", {
-          p_session_id: sessionId,
-        });
-        const row = Array.isArray(result.data)
-          ? (result.data[0] as SundayUnliSessionRow | undefined)
-          : undefined;
+  if (sessionsResult.error) {
+    return {
+      ok: false as const,
+      error: "One or more event registrations could not be loaded. Please refresh and try again.",
+    };
+  }
 
-        return { sessionId, row, error: result.error };
-      }),
-    ),
-  ]);
+  type EventSessionRow = {
+    kind: "open_play" | "sunday_unli";
+    session_id: string;
+    title: string;
+    starts_at: string;
+    ends_at: string;
+    court_names: string[] | null;
+  };
+  const sessions = (sessionsResult.data ?? []) as EventSessionRow[];
+  const openPlayById = new Map(
+    sessions
+      .filter((session) => session.kind === "open_play")
+      .map((session) => [session.session_id, session]),
+  );
+  const sundayUnliById = new Map(
+    sessions
+      .filter((session) => session.kind === "sunday_unli")
+      .map((session) => [session.session_id, session]),
+  );
 
   if (
-    openPlaySessions.some((session) => session.error || !session.row) ||
-    sundayUnliSessions.some((session) => session.error || !session.row)
+    openPlayRows.some((signup) => !openPlayById.has(signup.session_id)) ||
+    sundayUnliRows.some((signup) => !sundayUnliById.has(signup.session_id))
   ) {
     return {
       ok: false as const,
@@ -253,12 +239,6 @@ export async function getMyBookingsData() {
     };
   }
 
-  const openPlayById = new Map(
-    openPlaySessions.map((session) => [session.sessionId, session.row!]),
-  );
-  const sundayUnliById = new Map(
-    sundayUnliSessions.map((session) => [session.sessionId, session.row!]),
-  );
   const courtItems = courtRows.map((booking) => {
     const payment = one(booking.payments);
     const status = displayStatus(
