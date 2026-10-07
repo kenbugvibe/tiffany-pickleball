@@ -3,7 +3,10 @@
 import { useActionState, useMemo, useState } from "react";
 
 import { createBookingAction } from "@/actions/bookings";
-import { emptyBookingActionState } from "@/lib/booking-form-state";
+import {
+  emptyBookingActionState,
+  MAX_PADDLES,
+} from "@/lib/booking-form-state";
 import type { AvailabilityRow } from "@/lib/data/availability";
 import { manilaTimeFormatter } from "@/lib/dates";
 import { formatPeso } from "@/lib/money";
@@ -310,9 +313,12 @@ export function BookingForm({
               </output>
               <button
                 type="button"
-                onClick={() => setPaddleCount((count) => count + 1)}
+                onClick={() =>
+                  setPaddleCount((count) => Math.min(MAX_PADDLES, count + 1))
+                }
+                disabled={paddleCount >= MAX_PADDLES}
                 aria-label="Add one paddle"
-                className="grid size-12 place-items-center rounded-xl bg-court-800 text-xl font-bold text-white hover:bg-court-700"
+                className="grid size-12 place-items-center rounded-xl bg-court-800 text-xl font-bold text-white hover:bg-court-700 disabled:opacity-35"
               >
                 +
               </button>

@@ -99,6 +99,8 @@ export type OwnerTimelineBooking = {
   sundayUnliReference: string | null;
   sundayUnliPrice: number | null;
   sundayUnliStatus: string | null;
+  /** Null means the customer has not uploaded a receipt yet. */
+  paymentStatus: string | null;
 };
 
 export type OwnerPendingPayment = ReviewParent & {
@@ -310,7 +312,7 @@ export async function getOwnerTodayData() {
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status), payments(id, status)",
       )
       .lt("starts_at", bounds.endIso)
       .gt("ends_at", bounds.startIso)
@@ -394,6 +396,7 @@ export async function getOwnerTodayData() {
         ? Number(sundayUnli.price_per_player)
         : null,
       sundayUnliStatus: sundayUnli?.status ?? null,
+      paymentStatus: one(booking.payments ?? null)?.status ?? null,
     } satisfies OwnerTimelineBooking;
   });
 
@@ -484,7 +487,7 @@ export async function getOwnerCalendarData(
     supabase
       .from("bookings")
       .select(
-        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status)",
+        "id, reference, court_id, starts_at, ends_at, kind, status, total_amount, paddle_count, block_reason, customers(full_name, phone, email), courts(name), open_play_session_courts(open_play_sessions(id, reference, title, price_per_player, is_published)), sunday_unli_sessions(id, reference, price_per_player, status), payments(id, status)",
       )
       .lt("starts_at", weekEnd.startIso)
       .gt("ends_at", weekBounds.startIso)
@@ -610,6 +613,7 @@ export async function getOwnerCalendarData(
           ? Number(sundayUnli.price_per_player)
           : null,
         sundayUnliStatus: sundayUnli?.status ?? null,
+        paymentStatus: one(booking.payments ?? null)?.status ?? null,
       } satisfies OwnerTimelineBooking;
     });
 

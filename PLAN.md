@@ -193,7 +193,8 @@ Items marked **Confident** are supported by the build specification, reference d
 - **Confident —** Normal operating hours are daily from 8:00 AM until 12:00 midnight in the `Asia/Manila` timezone.
 - **Confident —** Court rates are PHP 200 from 8:00 AM–12:00 NN, PHP 250 from 12:00 NN–4:00 PM, and PHP 300 from 4:00 PM–12:00 MN.
 - **Confident —** Paddle rental costs PHP 50 per paddle per hour.
-- **Guessing —** The maximum paddle quantity is eight; that limit appears in the design logic but not in the build specification.
+- **Confident —** The maximum paddle quantity is eight, enforced by the database since October 7, 2026.
+- **Confident —** Each customer may hold at most 2 unpaid upcoming court bookings and may book at most 60 days ahead. Tiffany can cancel an unpaid booking from the calendar day view, which emails the customer.
 - **Confident —** A customer may reserve several adjacent one-hour slots as one multi-hour booking.
 
 ### Customer accounts and access

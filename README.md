@@ -53,6 +53,12 @@ payments `reschedule_due`, and Money gains a Mark rescheduled action. Existing
 the matching app code, then run
 `supabase/tests/reschedule_instead_of_refund_verification.sql`.
 
+Migration `202610070022_security_hardening.sql` limits each customer to 2
+unpaid court bookings, 60 days ahead, and 8 paddles. It also blocks direct
+payment inserts, adds text length limits, and gives Tiffany a Cancel unpaid
+action in the calendar day view. Apply it, then run
+`supabase/tests/security_hardening_verification.sql`.
+
 After applying the hold-removal migrations, this query should return no rows:
 
 ```sql

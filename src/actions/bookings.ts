@@ -3,7 +3,11 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 
-import type { BookingActionState } from "@/lib/booking-form-state";
+import {
+  MAX_DAYS_AHEAD,
+  MAX_PADDLES,
+  type BookingActionState,
+} from "@/lib/booking-form-state";
 import { ensureCustomerProfile } from "@/lib/data/customers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,6 +46,18 @@ function bookingError(code: string | undefined) {
     return "One of those times was just reserved. Choose another available time.";
   }
 
+  if (code === "TP001") {
+    return "You already have 2 unpaid bookings. Upload payment for those before reserving more.";
+  }
+
+  if (code === "TP002") {
+    return `Bookings can be made up to ${MAX_DAYS_AHEAD} days ahead. Choose an earlier date.`;
+  }
+
+  if (code === "TP003") {
+    return `You can rent up to ${MAX_PADDLES} paddles per booking.`;
+  }
+
   return "We could not reserve that court. Refresh the schedule and try again.";
 }
 
@@ -75,7 +91,8 @@ export async function createBookingAction(
 
   if (
     (needsPaddles !== "yes" && needsPaddles !== "no") ||
-    (needsPaddles === "yes" && (!paddleCount || paddleCount < 1)) ||
+    (needsPaddles === "yes" &&
+      (!paddleCount || paddleCount < 1 || paddleCount > MAX_PADDLES)) ||
     (needsPaddles === "no" && paddleCount !== 0)
   ) {
     return failure("Choose whether you need paddle rentals.");
@@ -90,6 +107,10 @@ export async function createBookingAction(
     startsAt <= new Date()
   ) {
     return failure("Choose a valid future court time before continuing.");
+  }
+
+  if (startsAt.valueOf() > Date.now() + MAX_DAYS_AHEAD * 24 * 3_600_000) {
+    return failure(bookingError("TP002"));
   }
 
   const durationHours = (endsAt.valueOf() - startsAt.valueOf()) / 3_600_000;

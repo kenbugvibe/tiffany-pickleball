@@ -1,4 +1,5 @@
 import {
+  cancelUnpaidBookingAction,
   removeCourtBlockAction,
   removeOpenPlaySessionAction,
   removeSundayUnliSessionAction,
@@ -257,15 +258,59 @@ export function CalendarDayGrid({
                     </p>
                   </div>
 
-                  <RescheduleBookingForm
-                    booking={booking}
-                    courts={courts}
-                    selectedDay={selectedDay}
-                    today={today}
-                    openingHour={openingHour}
-                    closingHour={closingHour}
-                    nowIso={nowIso}
-                  />
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <RescheduleBookingForm
+                      booking={booking}
+                      courts={courts}
+                      selectedDay={selectedDay}
+                      today={today}
+                      openingHour={openingHour}
+                      closingHour={closingHour}
+                      nowIso={nowIso}
+                    />
+                    {booking.status === "pending" && !booking.paymentStatus ? (
+                      <details className="group sm:text-right">
+                        <summary className="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50">
+                          Cancel unpaid
+                        </summary>
+                        <form
+                          action={cancelUnpaidBookingAction}
+                          className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3 text-left"
+                        >
+                          <input type="hidden" name="bookingId" value={booking.id} />
+                          <input type="hidden" name="returnDate" value={selectedDay} />
+                          <label className="grid gap-1 text-xs font-bold text-red-900">
+                            Note for the customer (optional)
+                            <input
+                              type="text"
+                              name="reason"
+                              maxLength={240}
+                              placeholder="e.g. No payment received"
+                              className="min-h-10 rounded-lg border border-red-200 bg-white px-2 font-normal text-ink-900 outline-none focus:border-red-700"
+                            />
+                          </label>
+                          <label className="mt-3 flex items-start gap-2 text-xs leading-5 text-red-900">
+                            <input
+                              type="checkbox"
+                              name="confirmed"
+                              value="yes"
+                              required
+                              className="mt-0.5 size-4 accent-red-700"
+                            />
+                            Cancel this booking because no receipt was
+                            uploaded. The slot reopens and the customer is
+                            emailed.
+                          </label>
+                          <button
+                            type="submit"
+                            className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800"
+                          >
+                            Confirm cancellation
+                          </button>
+                        </form>
+                      </details>
+                    ) : null}
+                  </div>
                 </div>
               </article>
             ))}

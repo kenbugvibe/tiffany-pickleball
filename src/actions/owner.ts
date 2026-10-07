@@ -16,6 +16,7 @@ import { sendBookingRescheduledNotification } from "@/lib/notifications/booking-
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
 import { sendEventCancelledNotification } from "@/lib/notifications/event-cancelled";
 import { sendReceiptRejectedNotification } from "@/lib/notifications/receipt-rejected";
+import { sendUnpaidCancelledNotification } from "@/lib/notifications/unpaid-cancelled";
 import {
   openPlayReturnPath,
   openPlayTimes,
@@ -403,6 +404,103 @@ export async function removeCourtBlockAction(formData: FormData) {
   redirect(
     `${courtBlockReturnPath(returnDate)}&unblocked=${encodeURIComponent(data)}`,
   );
+}
+
+export async function cancelUnpaidBookingAction(formData: FormData) {
+  await requireOwner();
+
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  const submittedDate = String(formData.get("returnDate") ?? "");
+  const returnDate = isIsoDate(submittedDate)
+    ? submittedDate
+    : getTodayInManila();
+
+  if (!UUID_PATTERN.test(bookingId) || reason.length > 240) {
+    redirect(`${courtBlockReturnPath(returnDate)}&error=invalid-cancel-unpaid`);
+  }
+
+  if (formData.get("confirmed") !== "yes") {
+    redirect(`${courtBlockReturnPath(returnDate)}&error=cancel-unpaid-confirmation-required`);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cancel_unpaid_booking", {
+    p_booking_id: bookingId,
+    p_reason: reason || null,
+  });
+
+  if (error || !data || typeof data !== "object") {
+    const code = error?.message?.toLowerCase().includes("has a receipt")
+      ? "cancel-unpaid-has-receipt"
+      : "cancel-unpaid-failed";
+    redirect(`${courtBlockReturnPath(returnDate)}&error=${code}`);
+  }
+
+  const result = data as { reference?: unknown; notification_id?: unknown };
+  const reference =
+    typeof result.reference === "string" ? result.reference : "cancelled";
+  const notificationId =
+    typeof result.notification_id === "string" &&
+    UUID_PATTERN.test(result.notification_id)
+      ? result.notification_id
+      : null;
+  let emailDelivered = false;
+
+  if (notificationId) {
+    const { data: notification } = await supabase
+      .from("customer_notifications")
+      .select(
+        "id, recipient_name, recipient_email, booking_reference, court_name, starts_at, ends_at, reason",
+      )
+      .eq("id", notificationId)
+      .maybeSingle();
+
+    if (notification) {
+      let delivery: { ok: true } | { ok: false; error: string };
+
+      try {
+        delivery = await sendUnpaidCancelledNotification(notification);
+      } catch {
+        delivery = {
+          ok: false,
+          error: "The email provider could not be reached.",
+        };
+      }
+
+      const { error: updateError } = await supabase
+        .from("customer_notifications")
+        .update(
+          delivery.ok
+            ? {
+                status: "sent",
+                sent_at: new Date().toISOString(),
+                last_error: null,
+              }
+            : {
+                status: "failed",
+                sent_at: null,
+                last_error: delivery.error.slice(0, 1000),
+              },
+        )
+        .eq("id", notification.id);
+
+      emailDelivered = delivery.ok && !updateError;
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+  revalidatePath("/my-bookings");
+
+  const successParams = new URLSearchParams({ cancelledUnpaid: reference });
+
+  if (!emailDelivered) {
+    successParams.set("cancelUnpaidEmailFailed", "1");
+  }
+
+  redirect(`${courtBlockReturnPath(returnDate)}&${successParams.toString()}`);
 }
 
 export async function rescheduleBookingAction(formData: FormData) {

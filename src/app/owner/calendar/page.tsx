@@ -40,6 +40,8 @@ type OwnerCalendarPageProps = {
     cancelledPlayers?: string | string[];
     rescheduled?: string | string[];
     rescheduleEmailFailed?: string | string[];
+    cancelledUnpaid?: string | string[];
+    cancelUnpaidEmailFailed?: string | string[];
     cancelled?: string | string[];
     emailFailed?: string | string[];
     error?: string | string[];
@@ -115,6 +117,9 @@ export default async function OwnerCalendarPage({
       : "";
   const rescheduled = first(params.rescheduled);
   const rescheduleEmailFailed = first(params.rescheduleEmailFailed) === "1";
+  const cancelledUnpaid = first(params.cancelledUnpaid);
+  const cancelUnpaidEmailFailed =
+    first(params.cancelUnpaidEmailFailed) === "1";
   const cancelled = Number(first(params.cancelled) ?? 0);
   const emailFailed = Number(first(params.emailFailed) ?? 0);
   const error = first(params.error);
@@ -124,6 +129,10 @@ export default async function OwnerCalendarPage({
     "schedule-changed": "The schedule changed after your preview. Review the affected bookings again before confirming.",
     "special-conflict": "That period now overlaps a block or special session. Choose another time or manage that schedule first.",
     "email-not-configured": "Customer email must be configured before reservations can be cancelled.",
+    "invalid-cancel-unpaid": "That booking could not be cancelled. Refresh the page and try again.",
+    "cancel-unpaid-confirmation-required": "Check the confirmation box before cancelling the unpaid booking.",
+    "cancel-unpaid-has-receipt": "That booking now has a receipt. Review it on Today or reschedule it instead.",
+    "cancel-unpaid-failed": "The unpaid booking could not be cancelled. Confirm the security hardening migration is applied, then try again.",
     "reschedule-paid-first": "This period has paid bookings. Reschedule them first, then preview the block again.",
     "block-failed": "The court block could not be created. Confirm the Phase 4 migration is applied, then preview it again.",
     "invalid-remove-block": "The selected court block was invalid.",
@@ -258,6 +267,20 @@ export default async function OwnerCalendarPage({
             The reschedule email could not be delivered.
           </span>{" "}
           The new schedule was saved. Contact the customer directly.
+        </div>
+      ) : null}
+
+      {cancelledUnpaid ? (
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Unpaid booking {cancelledUnpaid} was cancelled and the slot reopened.
+          {cancelUnpaidEmailFailed ? "" : " The customer was emailed."}
+        </div>
+      ) : null}
+
+      {cancelledUnpaid && cancelUnpaidEmailFailed ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-bold">The cancellation email could not be delivered.</span>{" "}
+          Contact the customer directly.
         </div>
       ) : null}
 
