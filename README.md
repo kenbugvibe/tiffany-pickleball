@@ -41,7 +41,12 @@ migrations remove timed payment holds from court bookings, Open Play, and
 Sunday Unli. They also remove the two cron jobs that previously expired holds
 and pruned their run history.
 
-After applying the latest migrations, this query should return no rows:
+Migration `202610070020_receipt_rejected_notification.sql` changes
+`review_payment` to return JSON and queue a customer email when Tiffany rejects
+a receipt. Apply it before deploying the matching app code, then run
+`supabase/tests/receipt_rejected_verification.sql` to confirm it.
+
+After applying the hold-removal migrations, this query should return no rows:
 
 ```sql
 select jobname, schedule, active

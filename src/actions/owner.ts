@@ -15,6 +15,7 @@ import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { sendBookingRescheduledNotification } from "@/lib/notifications/booking-rescheduled";
 import { sendCourtBlockedNotification } from "@/lib/notifications/court-blocked";
 import { sendEventCancelledNotification } from "@/lib/notifications/event-cancelled";
+import { sendReceiptRejectedNotification } from "@/lib/notifications/receipt-rejected";
 import {
   openPlayReturnPath,
   openPlayTimes,
@@ -38,7 +39,7 @@ export async function reviewPaymentAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("review_payment", {
+  const { data, error } = await supabase.rpc("review_payment", {
     p_payment_id: paymentId,
     p_decision: decision,
   });
@@ -47,9 +48,77 @@ export async function reviewPaymentAction(formData: FormData) {
     redirect("/owner/today?error=review-failed");
   }
 
+  const successParams = new URLSearchParams({
+    reviewed: decision === "approve" ? "approved" : "rejected",
+  });
+
+  if (decision === "reject") {
+    const result: { notification_id?: unknown } =
+      data && typeof data === "object" && !Array.isArray(data) ? data : {};
+    const notificationId =
+      typeof result.notification_id === "string" &&
+      UUID_PATTERN.test(result.notification_id)
+        ? result.notification_id
+        : null;
+
+    if (!(await deliverReceiptRejectedNotification(supabase, notificationId))) {
+      successParams.set("rejectEmailFailed", "1");
+    }
+  }
+
+  revalidatePath("/");
   revalidatePath("/owner/today");
+  revalidatePath("/owner/calendar");
   revalidatePath("/owner/money");
-  redirect(`/owner/today?reviewed=${decision === "approve" ? "approved" : "rejected"}`);
+  revalidatePath("/my-bookings");
+  redirect(`/owner/today?${successParams.toString()}`);
+}
+
+async function deliverReceiptRejectedNotification(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  notificationId: string | null,
+) {
+  if (!notificationId) return false;
+
+  const { data: notification } = await supabase
+    .from("customer_notifications")
+    .select(
+      "id, recipient_name, recipient_email, booking_reference, event_label, court_name, starts_at, ends_at",
+    )
+    .eq("id", notificationId)
+    .maybeSingle();
+
+  if (!notification) return false;
+
+  let delivery: { ok: true } | { ok: false; error: string };
+
+  try {
+    delivery = await sendReceiptRejectedNotification(notification);
+  } catch {
+    delivery = {
+      ok: false,
+      error: "The email provider could not be reached.",
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("customer_notifications")
+    .update(
+      delivery.ok
+        ? {
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            last_error: null,
+          }
+        : {
+            status: "failed",
+            sent_at: null,
+            last_error: delivery.error.slice(0, 1000),
+          },
+    )
+    .eq("id", notification.id);
+
+  return delivery.ok && !updateError;
 }
 
 function moneyResultPath(

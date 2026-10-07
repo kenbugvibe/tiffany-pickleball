@@ -41,7 +41,7 @@ export function ReviewButtons({ paymentId }: { paymentId: string }) {
       <form
         action={reviewPaymentAction}
         onSubmit={(event) => {
-          if (!window.confirm("Reject this receipt and cancel the reservation?")) {
+          if (!window.confirm("Reject this receipt, cancel the reservation, and email the customer?")) {
             event.preventDefault();
           }
         }}

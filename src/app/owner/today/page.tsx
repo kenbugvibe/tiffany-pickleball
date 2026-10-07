@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 type OwnerTodayPageProps = {
   searchParams: Promise<{
     reviewed?: string | string[];
+    rejectEmailFailed?: string | string[];
     error?: string | string[];
   }>;
 };
@@ -37,6 +38,7 @@ export default async function OwnerTodayPage({
     ? params.reviewed[0]
     : params.reviewed;
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
+  const rejectEmailFailed = reviewed === "rejected" && Boolean(params.rejectEmailFailed);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
@@ -57,6 +59,15 @@ export default async function OwnerTodayPage({
       {reviewed ? (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           Payment {reviewed}. The dashboard has been refreshed.
+          {reviewed === "rejected" && !rejectEmailFailed
+            ? " The customer was emailed."
+            : null}
+        </div>
+      ) : null}
+
+      {rejectEmailFailed ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          The customer email could not be sent. Please contact the customer directly to let them know their reservation was cancelled.
         </div>
       ) : null}
 
