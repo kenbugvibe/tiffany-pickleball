@@ -9,6 +9,7 @@ import {
 import { BrandMark } from "@/components/shared/brand-mark";
 import { SiteNav } from "@/components/shared/site-nav";
 import { MAX_DAYS_AHEAD } from "@/lib/booking-form-state";
+import { CONTACT } from "@/lib/contact";
 import {
   getAvailabilityForDays,
   markUnbookableSlots,
@@ -229,6 +230,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Tiffany&apos;s Pickleball Court
           </p>
           <p>{COURT_ADDRESS}</p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <a href={CONTACT.phoneHref} className="hover:text-ink-900">
+              {CONTACT.phoneDisplay}
+            </a>
+            <a href={`mailto:${CONTACT.email}`} className="hover:text-ink-900">
+              Email
+            </a>
+            <a
+              href={CONTACT.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-ink-900"
+            >
+              Facebook
+            </a>
+          </p>
           <p className="flex gap-4">
             <Link href="/privacy" className="hover:text-ink-900">
               Privacy

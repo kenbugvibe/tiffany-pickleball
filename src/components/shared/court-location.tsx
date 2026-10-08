@@ -1,3 +1,5 @@
+import { ContactLinks } from "@/components/shared/contact-links";
+
 export const COURT_ADDRESS = "Poblacion, Maco, Davao de Oro";
 export const COURT_ADDRESS_FULL = "Poblacion, Maco, Davao de Oro 8806";
 export const COURT_REGION_SHORT = "Maco, Davao de Oro";
@@ -22,6 +24,13 @@ export function CourtLocation() {
         <p className="mt-3 text-base leading-7 text-ink-500">
           Tiffany&apos;s Pickleball Court · {COURT_ADDRESS_FULL}
         </p>
+
+        <div id="contact" className="mt-5 scroll-mt-24">
+          <p className="text-sm font-semibold text-ink-900">
+            Questions or changes to a booking? Reach Tiffany&apos;s directly.
+          </p>
+          <ContactLinks className="mt-3" />
+        </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-court-800/15 shadow-[0_10px_30px_rgba(7,52,28,.08)]">
           <iframe

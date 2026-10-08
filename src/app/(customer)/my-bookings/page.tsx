@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { MyBookingCard } from "@/components/booking/my-booking-card";
 import { BrandMark } from "@/components/shared/brand-mark";
+import { ContactLinks } from "@/components/shared/contact-links";
 import { SiteNav } from "@/components/shared/site-nav";
 import {
   getMyBookingsData,
@@ -150,6 +151,17 @@ export default async function MyBookingsPage({
             evaluatedAt={data.evaluatedAt}
           />
         )}
+
+        <section className="mt-10 rounded-2xl border border-court-800/10 bg-white p-5 sm:p-6">
+          <h2 className="font-display text-xl font-bold text-ink-900">
+            Need help with a booking?
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ink-500">
+            Contact Tiffany&apos;s Pickleball Court to change a paid booking or
+            ask about a cancelled session.
+          </p>
+          <ContactLinks className="mt-4" />
+        </section>
       </div>
     </main>
   );

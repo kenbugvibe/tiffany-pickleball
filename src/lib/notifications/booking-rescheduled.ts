@@ -2,6 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
+import { CONTACT_EMAIL_HTML, CONTACT_EMAIL_TEXT } from "@/lib/contact";
 import { manilaScheduleFormatter } from "@/lib/dates";
 import { escapeHtml } from "@/lib/notifications/court-blocked";
 
@@ -52,8 +53,8 @@ export async function sendBookingRescheduledNotification(
       from: `${fromName} <${fromEmail}>`,
       to: notification.recipient_email,
       subject: `Reservation ${notification.booking_reference} was rescheduled`,
-      text: `Hi ${notification.recipient_name},\n\nYour reservation has been moved to a new schedule. Your payment and amount due stay the same.\n\nReference: ${notification.booking_reference}\n\nNew schedule\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}\n\nPrevious schedule\nCourt: ${notification.previous_court_name}\nStarts: ${previousStart}\nEnds: ${previousEnd}\n${noteText}\nIf the new time does not work for you, please contact Tiffany's Pickleball Court.`,
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation rescheduled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>Your reservation has been moved to a new schedule. Your payment and amount due stay the same.</p><p><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</p><h2 style="font-size:16px">New schedule</h2><ul><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li></ul><h2 style="font-size:16px;color:#5b6b62">Previous schedule</h2><ul style="color:#5b6b62"><li>Court: ${escapeHtml(notification.previous_court_name)}</li><li>Starts: ${escapeHtml(previousStart)}</li><li>Ends: ${escapeHtml(previousEnd)}</li></ul>${noteHtml}<p>If the new time does not work for you, please contact Tiffany&apos;s Pickleball Court.</p></div>`,
+      text: `Hi ${notification.recipient_name},\n\nYour reservation has been moved to a new schedule. Your payment and amount due stay the same.\n\nReference: ${notification.booking_reference}\n\nNew schedule\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}\n\nPrevious schedule\nCourt: ${notification.previous_court_name}\nStarts: ${previousStart}\nEnds: ${previousEnd}\n${noteText}\nIf the new time does not work for you, please contact Tiffany's Pickleball Court.${CONTACT_EMAIL_TEXT}`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation rescheduled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>Your reservation has been moved to a new schedule. Your payment and amount due stay the same.</p><p><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</p><h2 style="font-size:16px">New schedule</h2><ul><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li></ul><h2 style="font-size:16px;color:#5b6b62">Previous schedule</h2><ul style="color:#5b6b62"><li>Court: ${escapeHtml(notification.previous_court_name)}</li><li>Starts: ${escapeHtml(previousStart)}</li><li>Ends: ${escapeHtml(previousEnd)}</li></ul>${noteHtml}<p>If the new time does not work for you, please contact Tiffany&apos;s Pickleball Court.</p>${CONTACT_EMAIL_HTML}</div>`,
     },
     { idempotencyKey: `booking-rescheduled/${notification.id}` },
   );

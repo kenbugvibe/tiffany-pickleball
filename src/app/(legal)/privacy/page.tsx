@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CONTACT } from "@/lib/contact";
+
 export const metadata: Metadata = {
   title: "Privacy policy",
   description:
@@ -80,8 +82,13 @@ export default function PrivacyPage() {
 
       <h2>Contact us</h2>
       <p>
-        For privacy questions, send a message to the Tiffany&apos;s Pickleball
-        Court Page on Facebook.
+        For privacy questions, email{" "}
+        <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>, call or text{" "}
+        <a href={CONTACT.phoneHref}>{CONTACT.phoneDisplay}</a>, or message the{" "}
+        <a href={CONTACT.facebookUrl} target="_blank" rel="noopener noreferrer">
+          Tiffany&apos;s Pickleball Court Facebook page
+        </a>
+        .
       </p>
     </>
   );

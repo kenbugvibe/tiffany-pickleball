@@ -2,6 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
+import { CONTACT_EMAIL_HTML, CONTACT_EMAIL_TEXT } from "@/lib/contact";
 import { manilaScheduleFormatter } from "@/lib/dates";
 
 export type CourtBlockedNotification = {
@@ -56,8 +57,8 @@ export async function sendCourtBlockedNotification(
       from: `${fromName} <${fromEmail}>`,
       to: notification.recipient_email,
       subject: `Reservation ${notification.booking_reference} was cancelled`,
-      text: `Hi ${notification.recipient_name},\n\nWe're sorry, but your reservation has been cancelled because the court is unavailable.\n\nReference: ${notification.booking_reference}\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}\nReason: ${notification.reason}\n\nIf you need help choosing another time, please contact Tiffany's Pickleball Court.`,
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation cancelled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>We&apos;re sorry, but your reservation has been cancelled because the court is unavailable.</p><ul><li><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</li><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li><li><strong>Reason:</strong> ${escapeHtml(notification.reason)}</li></ul><p>If you need help choosing another time, please contact Tiffany&apos;s Pickleball Court.</p></div>`,
+      text: `Hi ${notification.recipient_name},\n\nWe're sorry, but your reservation has been cancelled because the court is unavailable.\n\nReference: ${notification.booking_reference}\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}\nReason: ${notification.reason}\n\nIf you need help choosing another time, please contact Tiffany's Pickleball Court.${CONTACT_EMAIL_TEXT}`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation cancelled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>We&apos;re sorry, but your reservation has been cancelled because the court is unavailable.</p><ul><li><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</li><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li><li><strong>Reason:</strong> ${escapeHtml(notification.reason)}</li></ul><p>If you need help choosing another time, please contact Tiffany&apos;s Pickleball Court.</p>${CONTACT_EMAIL_HTML}</div>`,
     },
     { idempotencyKey: `court-blocked/${notification.id}` },
   );

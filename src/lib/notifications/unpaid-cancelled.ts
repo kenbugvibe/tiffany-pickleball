@@ -2,6 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
+import { CONTACT_EMAIL_HTML, CONTACT_EMAIL_TEXT } from "@/lib/contact";
 import { manilaScheduleFormatter } from "@/lib/dates";
 import { escapeHtml } from "@/lib/notifications/court-blocked";
 
@@ -47,8 +48,8 @@ export async function sendUnpaidCancelledNotification(
       from: `${fromName} <${fromEmail}>`,
       to: notification.recipient_email,
       subject: `Reservation ${notification.booking_reference} was cancelled`,
-      text: `Hi ${notification.recipient_name},\n\nYour reservation was cancelled because we did not receive a GCash payment for it, and the slot has been released.\n\nReference: ${notification.booking_reference}\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}${noteText}\n\nYou are welcome to book again on our website. If you already paid, please contact Tiffany's Pickleball Court with your GCash reference number.`,
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation cancelled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>Your reservation was cancelled because we did not receive a GCash payment for it, and the slot has been released.</p><ul><li><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</li><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li></ul>${noteHtml}<p>You are welcome to book again on our website. If you already paid, please contact Tiffany&apos;s Pickleball Court with your GCash reference number.</p></div>`,
+      text: `Hi ${notification.recipient_name},\n\nYour reservation was cancelled because we did not receive a GCash payment for it, and the slot has been released.\n\nReference: ${notification.booking_reference}\nCourt: ${notification.court_name}\nStarts: ${start}\nEnds: ${end}${noteText}\n\nYou are welcome to book again on our website. If you already paid, please contact Tiffany's Pickleball Court with your GCash reference number.${CONTACT_EMAIL_TEXT}`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#16231c"><h1 style="font-size:24px">Reservation cancelled</h1><p>Hi ${escapeHtml(notification.recipient_name)},</p><p>Your reservation was cancelled because we did not receive a GCash payment for it, and the slot has been released.</p><ul><li><strong>Reference:</strong> ${escapeHtml(notification.booking_reference)}</li><li><strong>Court:</strong> ${escapeHtml(notification.court_name)}</li><li><strong>Starts:</strong> ${escapeHtml(start)}</li><li><strong>Ends:</strong> ${escapeHtml(end)}</li></ul>${noteHtml}<p>You are welcome to book again on our website. If you already paid, please contact Tiffany&apos;s Pickleball Court with your GCash reference number.</p>${CONTACT_EMAIL_HTML}</div>`,
     },
     { idempotencyKey: `unpaid-cancelled/${notification.id}` },
   );

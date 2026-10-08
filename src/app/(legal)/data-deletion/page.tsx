@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { CONTACT } from "@/lib/contact";
+
 export const metadata: Metadata = {
   title: "Data deletion",
   description:
@@ -20,8 +22,13 @@ export default function DataDeletionPage() {
       <h2>How to request deletion</h2>
       <ul>
         <li>
-          Send a message to the Tiffany&apos;s Pickleball Court Page on
-          Facebook.
+          Email{" "}
+          <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>, or message
+          the{" "}
+          <a href={CONTACT.facebookUrl} target="_blank" rel="noopener noreferrer">
+            Tiffany&apos;s Pickleball Court Facebook page
+          </a>
+          .
         </li>
         <li>
           Say that you want your account deleted, and include the email address
