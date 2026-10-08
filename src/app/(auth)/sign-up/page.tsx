@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { SignUpForm } from "@/components/shared/sign-up-form";
 import { SocialAuthButtons } from "@/components/shared/social-auth-buttons";
+import { getAuthUser } from "@/lib/auth";
 import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,9 +29,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const error = Array.isArray(rawError) ? rawError[0] : rawError;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (user) {
     const [{ data: customerId }, { data: isAdmin }] = await Promise.all([

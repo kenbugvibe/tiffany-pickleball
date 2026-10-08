@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAuthUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhPhone } from "@/lib/validation";
 
@@ -12,9 +13,7 @@ import { normalizePhPhone } from "@/lib/validation";
  */
 export async function ensureCustomerProfile() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user?.email) {
     return null;
@@ -30,7 +29,7 @@ export async function ensureCustomerProfile() {
     return existing.id as string;
   }
 
-  const metadata = user.user_metadata ?? {};
+  const metadata = user.userMetadata;
   const fullName = String(metadata.full_name ?? "").trim();
   const phone = normalizePhPhone(String(metadata.phone ?? ""));
 

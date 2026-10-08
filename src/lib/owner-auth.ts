@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { getAuthUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -12,9 +13,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export const requireOwner = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect("/sign-in?next=%2Fowner%2Ftoday");

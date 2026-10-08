@@ -7,6 +7,7 @@ import {
   getAvailabilityForDays,
   markUnbookableSlots,
 } from "@/lib/data/availability";
+import { getAuthUser } from "@/lib/auth";
 import { ensureCustomerProfile } from "@/lib/data/customers";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -39,9 +40,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
     : null;
   const initialStartsAt = firstValue(params.startsAt) ?? null;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     const next = `/book?date=${encodeURIComponent(selectedDate)}`;

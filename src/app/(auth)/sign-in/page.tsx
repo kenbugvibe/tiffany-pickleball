@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { SignInForm } from "@/components/shared/sign-in-form";
 import { SocialAuthButtons } from "@/components/shared/social-auth-buttons";
+import { getAuthUser } from "@/lib/auth";
 import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,9 +29,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const error = firstValue(params.error);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (user) {
     const [{ data: customerId }, { data: isAdmin }] = await Promise.all([

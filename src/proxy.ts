@@ -50,12 +50,13 @@ export async function proxy(request: NextRequest) {
 
   // Refreshes an expiring session and writes the rotated cookies onto the
   // response. Server Components cannot set cookies, so without this a session
-  // would silently lapse mid-visit.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // would silently lapse mid-visit. getClaims() verifies the token locally
+  // with the project's cached ES256 public key instead of calling Supabase
+  // Auth over the network on every request.
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims?.sub);
 
-  if (!user && isProtected(request.nextUrl.pathname)) {
+  if (!signedIn && isProtected(request.nextUrl.pathname)) {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = "/sign-in";
     signInUrl.search = "";

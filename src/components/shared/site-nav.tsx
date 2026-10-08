@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { signOutAction } from "@/actions/auth";
+import { getAuthUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const linkClass =
@@ -8,9 +9,7 @@ const linkClass =
 
 export async function SiteNav() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const [{ data: isAdmin }, { data: customerId }] = user
     ? await Promise.all([
         supabase.rpc("is_admin"),

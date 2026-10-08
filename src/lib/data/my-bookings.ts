@@ -2,6 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
+import { getAuthUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 type OneOrMany<T> = T | T[] | null;
@@ -129,9 +130,7 @@ function actionFor(
 
 export async function getMyBookingsData() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect("/sign-in?next=%2Fmy-bookings");

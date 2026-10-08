@@ -2,17 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { UpdatePasswordForm } from "@/components/shared/update-password-form";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Choose a new password",
 };
 
 export default async function UpdatePasswordPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   // Reaching this page means the recovery link already created a session.
   if (!user) {

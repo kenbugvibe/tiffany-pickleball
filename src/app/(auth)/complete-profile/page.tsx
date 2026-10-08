@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/actions/auth";
 import { CompleteProfileForm } from "@/components/shared/complete-profile-form";
+import { getAuthUser } from "@/lib/auth";
 import { safeRedirectPath } from "@/lib/redirects";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,9 +23,7 @@ export default async function CompleteProfilePage({
     Array.isArray(rawNext) ? rawNext[0] : rawNext,
   );
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(`/sign-in?next=${encodeURIComponent(next)}`);
@@ -43,7 +42,7 @@ export default async function CompleteProfilePage({
     redirect(next);
   }
 
-  const metadata = user.user_metadata ?? {};
+  const metadata = user.userMetadata;
   const defaultName = String(
     metadata.full_name ?? metadata.name ?? "",
   ).trim();
