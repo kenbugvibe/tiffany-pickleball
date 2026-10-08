@@ -70,11 +70,18 @@ function isValidDate(value: string | undefined): value is string {
   return !Number.isNaN(date.valueOf()) && toIsoDate(date) === value;
 }
 
-function getWeekStart(date: Date) {
-  return addDays(date, -date.getUTCDay());
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Pages are rolling 7-day windows starting today, so the strip never shows a
+ * date that has already passed.
+ */
+function getWindowStart(selected: Date, today: Date) {
+  const daysAhead = Math.round((selected.valueOf() - today.valueOf()) / DAY_MS);
+  return addDays(today, Math.floor(daysAhead / 7) * 7);
 }
 
-function summarizeDay(date: string, rows: AvailabilityRow[], today: string) {
+function summarizeDay(date: string, rows: AvailabilityRow[]) {
   const parsedDate = toDate(date);
   const event = rows.find(
     (row) =>
@@ -96,7 +103,6 @@ function summarizeDay(date: string, rows: AvailabilityRow[], today: string) {
       (row) => row.availability_status === "sunday_unli",
     ),
     eventPrice: event?.entry_price ?? null,
-    isPast: date < today,
   };
 }
 
@@ -110,9 +116,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     isValidDate(requestedValue) && requestedValue >= today
       ? requestedValue
       : today;
-  const selected = toDate(selectedDate);
-  const weekStart = getWeekStart(selected);
-  const currentWeekStart = getWeekStart(toDate(today));
+  const weekStart = getWindowStart(toDate(selectedDate), toDate(today));
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     toIsoDate(addDays(weekStart, index)),
   );
@@ -125,12 +129,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   );
   const selectedRows = availability[selectedDate] ?? [];
   const days = weekDates.map((date) =>
-    summarizeDay(date, availability[date] ?? [], today),
+    summarizeDay(date, availability[date] ?? []),
   );
   const previousWeek =
-    weekStart > currentWeekStart
-      ? toIsoDate(addDays(weekStart, -7))
-      : null;
+    toIsoDate(weekStart) > today ? toIsoDate(addDays(weekStart, -7)) : null;
   // Stop paging once the next week starts beyond the booking window.
   const lastBookableDate = toIsoDate(addDays(toDate(today), MAX_DAYS_AHEAD));
   const followingWeek = toIsoDate(addDays(weekStart, 7));

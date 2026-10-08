@@ -13,7 +13,6 @@ type DaySummary = {
   hasOpenPlay: boolean;
   hasSundayUnli: boolean;
   eventPrice: number | null;
-  isPast: boolean;
 };
 
 type AvailabilityBoardProps = {
@@ -197,20 +196,21 @@ function CourtStatus({
 
 function DayCard({ day, selected }: DayCardProps) {
   const eventLabel = day.eventPrice ? formatPrice(day.eventPrice) : null;
-  const detail = day.isPast
-    ? "Past"
-    : day.hasSundayUnli
-      ? `Unli${eventLabel ? ` · ${eventLabel}` : ""}`
-      : day.hasOpenPlay
-        ? `Open play${eventLabel ? ` · ${eventLabel}` : ""}`
-        : `${day.openCount} open`;
+  const detail = day.hasSundayUnli
+    ? `Unli${eventLabel ? ` · ${eventLabel}` : ""}`
+    : day.hasOpenPlay
+      ? `Open play${eventLabel ? ` · ${eventLabel}` : ""}`
+      : `${day.openCount} open`;
   const classes = selected
     ? "border-court-800 bg-court-800 text-white shadow-[0_5px_0_#c89b20]"
-    : day.isPast
-      ? "border-transparent bg-[#f1eee6] text-ink-500/45"
-      : "border-court-800/10 bg-cream-50 text-ink-900 hover:border-gold-500";
-  const content = (
-    <>
+    : "border-court-800/10 bg-cream-50 text-ink-900 hover:border-gold-500";
+  return (
+    <Link
+      href={`/?date=${day.date}#availability`}
+      aria-current={selected ? "date" : undefined}
+      aria-label={`${day.dayLabel} ${day.dateLabel}, ${detail}`}
+      className={`min-h-20 rounded-xl border px-3 py-3 transition ${classes}`}
+    >
       <span className="block text-xs font-semibold uppercase tracking-wide opacity-70">
         {day.dayLabel}
       </span>
@@ -224,26 +224,6 @@ function DayCard({ day, selected }: DayCardProps) {
       >
         {detail}
       </span>
-    </>
-  );
-  const className = `min-h-20 rounded-xl border px-3 py-3 transition ${classes}`;
-
-  if (day.isPast) {
-    return (
-      <span className={className} aria-label={`${day.dayLabel} ${day.dateLabel}, past date`}>
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      href={`/?date=${day.date}#availability`}
-      aria-current={selected ? "date" : undefined}
-      aria-label={`${day.dayLabel} ${day.dateLabel}, ${detail}`}
-      className={className}
-    >
-      {content}
     </Link>
   );
 }
