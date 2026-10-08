@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { CancelUnpaidButton } from "@/components/booking/cancel-unpaid-button";
+
 import type {
   MyBookingDisplayStatus,
   MyBookingItem,
@@ -130,14 +132,20 @@ export function MyBookingCard({ item }: { item: MyBookingItem }) {
         <p className="max-w-xl text-sm leading-6 text-ink-500">
           {status.description}
         </p>
-        {item.actionHref && item.actionLabel ? (
-          <Link
-            href={item.actionHref}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-court-800 px-4 text-sm font-bold text-white transition hover:bg-court-700"
-          >
-            {item.actionLabel}
-          </Link>
-        ) : null}
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          {item.kind === "court_booking" &&
+          item.displayStatus === "awaiting_payment" ? (
+            <CancelUnpaidButton bookingId={item.id} reference={item.reference} />
+          ) : null}
+          {item.actionHref && item.actionLabel ? (
+            <Link
+              href={item.actionHref}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-court-800 px-4 text-sm font-bold text-white transition hover:bg-court-700"
+            >
+              {item.actionLabel}
+            </Link>
+          ) : null}
+        </div>
       </div>
     </article>
   );

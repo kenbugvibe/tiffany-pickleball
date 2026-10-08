@@ -21,7 +21,7 @@ type AvailabilityBoardProps = {
   rows: AvailabilityRow[];
   selectedDate: string;
   previousWeek: string | null;
-  nextWeek: string;
+  nextWeek: string | null;
 };
 
 type DayCardProps = {
@@ -104,6 +104,10 @@ function getStatusLabel(row: AvailabilityRow) {
         : "Sunday unli";
     case "blocked":
       return "Closed";
+    case "past":
+      return "Past";
+    case "not_open":
+      return "Not open yet";
     default:
       return "Booked";
   }
@@ -160,6 +164,8 @@ function CourtStatus({
       "border-gold-500 bg-[#fbf1d4] text-[#6b540c] hover:shadow-[0_4px_14px_rgba(200,155,32,0.2)]",
     sunday_unli:
       "border-court-800 bg-court-950 text-gold-200 hover:bg-court-800",
+    past: "border-transparent bg-[#f3f1ea] text-[#a3a8a2]",
+    not_open: "border-dashed border-court-800/15 bg-white text-[#a3a8a2]",
   };
   const content = (
     <>
@@ -302,13 +308,22 @@ export function AvailabilityBoard({
               <span className="mx-1.5 text-ink-500/40">—</span>
               {dateRangeFormatter.format(toDate(days[days.length - 1].date))}
             </p>
-            <Link
-              className="grid size-11 place-items-center rounded-full border border-court-800/15 text-xl text-court-800 transition hover:border-gold-500"
-              href={`/?date=${nextWeek}#availability`}
-              aria-label="Next week"
-            >
-              →
-            </Link>
+            {nextWeek ? (
+              <Link
+                className="grid size-11 place-items-center rounded-full border border-court-800/15 text-xl text-court-800 transition hover:border-gold-500"
+                href={`/?date=${nextWeek}#availability`}
+                aria-label="Next week"
+              >
+                →
+              </Link>
+            ) : (
+              <span
+                aria-hidden="true"
+                className="grid size-11 place-items-center rounded-full border border-transparent text-xl text-ink-500/25"
+              >
+                →
+              </span>
+            )}
           </div>
 
           <div className="-mx-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">

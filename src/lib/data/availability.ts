@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MAX_DAYS_AHEAD } from "@/lib/booking-form-state";
 import { createClient } from "@/lib/supabase/server";
 
 export type AvailabilityStatus =
@@ -7,7 +8,11 @@ export type AvailabilityStatus =
   | "booked"
   | "blocked"
   | "open_play"
-  | "sunday_unli";
+  | "sunday_unli"
+  /** Start time has passed (set by markUnbookableSlots, not the database). */
+  | "past"
+  /** Beyond the booking window (set by markUnbookableSlots). */
+  | "not_open";
 
 export type AvailabilityRow = {
   court_id: number;
@@ -47,4 +52,40 @@ export async function getAvailabilityForDays(days: string[]) {
   }
 
   return byDay;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Hides slots customers cannot actually book: open court hours that already
+ * started, events that already ended, and court hours beyond the
+ * MAX_DAYS_AHEAD booking window (the database enforces the same limit).
+ */
+export function markUnbookableSlots(
+  rows: AvailabilityRow[],
+  now = Date.now(),
+): AvailabilityRow[] {
+  const lastBookableStart = now + MAX_DAYS_AHEAD * DAY_MS;
+
+  return rows.map((row) => {
+    const startsAt = Date.parse(row.starts_at);
+    const endsAt = Date.parse(row.ends_at);
+
+    if (row.availability_status === "available") {
+      if (startsAt <= now) return { ...row, availability_status: "past" };
+      if (startsAt > lastBookableStart) {
+        return { ...row, availability_status: "not_open" };
+      }
+    }
+
+    if (
+      (row.availability_status === "open_play" ||
+        row.availability_status === "sunday_unli") &&
+      endsAt <= now
+    ) {
+      return { ...row, availability_status: "past" };
+    }
+
+    return row;
+  });
 }

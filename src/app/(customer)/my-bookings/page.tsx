@@ -70,8 +70,26 @@ function BookingSection({
   );
 }
 
-export default async function MyBookingsPage() {
-  const data = await getMyBookingsData();
+type MyBookingsPageProps = {
+  searchParams: Promise<{
+    cancelled?: string | string[];
+    error?: string | string[];
+  }>;
+};
+
+function first(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function MyBookingsPage({
+  searchParams,
+}: MyBookingsPageProps) {
+  const [data, params] = await Promise.all([
+    getMyBookingsData(),
+    searchParams,
+  ]);
+  const cancelled = first(params.cancelled);
+  const error = first(params.error);
 
   return (
     <main className="min-h-screen bg-cream-50">
@@ -97,6 +115,18 @@ export default async function MyBookingsPage() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
+        {cancelled ? (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            Booking {cancelled} was cancelled and the court time was released.
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            {error === "cancel-has-receipt"
+              ? "That booking already has a receipt, so it can't be cancelled here. Contact Tiffany's to change it."
+              : "The booking could not be cancelled. Refresh the page and try again."}
+          </div>
+        ) : null}
         {!data.ok ? (
           <section className="rounded-2xl border border-red-200 bg-red-50 p-6">
             <h1 className="font-display text-3xl font-bold text-red-900">

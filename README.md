@@ -64,6 +64,10 @@ Bookings, and Today's revenue, and adds signup indexes. The app depends on its
 new functions, so apply it before deploying, then run
 `supabase/tests/query_performance_verification.sql`.
 
+Migration `202610080024_customer_cancel_unpaid.sql` lets customers cancel their
+own unpaid court bookings from My Bookings. Apply it, then run
+`supabase/tests/customer_cancel_unpaid_verification.sql`.
+
 After applying the hold-removal migrations, this query should return no rows:
 
 ```sql

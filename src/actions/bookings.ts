@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
@@ -47,7 +48,7 @@ function bookingError(code: string | undefined) {
   }
 
   if (code === "TP001") {
-    return "You already have 2 unpaid bookings. Upload payment for those before reserving more.";
+    return "You already have 2 unpaid bookings. Upload payment for one, or cancel one in My bookings, before reserving more.";
   }
 
   if (code === "TP002") {
@@ -271,4 +272,46 @@ export async function submitPaymentProofAction(
   }
 
   redirect(`/book/confirmation/${encodeURIComponent(reference)}`);
+}
+
+export async function cancelMyUnpaidBookingAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/sign-in?next=%2Fmy-bookings");
+  }
+
+  const bookingId = String(formData.get("bookingId") ?? "");
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      bookingId,
+    )
+  ) {
+    redirect("/my-bookings?error=cancel-failed");
+  }
+
+  const { data: reference, error } = await supabase.rpc(
+    "cancel_my_unpaid_booking",
+    { p_booking_id: bookingId },
+  );
+
+  if (error || typeof reference !== "string") {
+    redirect(
+      `/my-bookings?error=${
+        error?.message?.includes("has a receipt")
+          ? "cancel-has-receipt"
+          : "cancel-failed"
+      }`,
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/my-bookings");
+  revalidatePath("/owner/calendar");
+  revalidatePath("/owner/today");
+  redirect(`/my-bookings?cancelled=${encodeURIComponent(reference)}`);
 }

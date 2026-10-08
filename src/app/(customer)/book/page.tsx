@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 
 import { BookingForm } from "@/components/booking/booking-form";
 import { BookingShell } from "@/components/booking/booking-shell";
-import { getAvailabilityForDays } from "@/lib/data/availability";
+import {
+  getAvailabilityForDays,
+  markUnbookableSlots,
+} from "@/lib/data/availability";
 import { ensureCustomerProfile } from "@/lib/data/customers";
 import { getTodayInManila, isIsoDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -71,7 +74,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
       .eq("id", 1)
       .single(),
   ]);
-  const rows = availability[selectedDate] ?? [];
+  const rows = markUnbookableSlots(availability[selectedDate] ?? []);
 
   if (settingsResult.error || !settingsResult.data) {
     return (

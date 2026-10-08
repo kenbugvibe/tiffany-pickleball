@@ -120,7 +120,6 @@ export function ReceiptUploadForm({
           name="receipt"
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
           required
           className="mt-1.5 block min-h-12 w-full rounded-xl border border-dashed border-court-800/30 bg-cream-50 px-3 py-2.5 text-sm text-ink-500 file:mr-3 file:rounded-lg file:border-0 file:bg-court-800 file:px-3 file:py-2 file:font-semibold file:text-white"
         />

@@ -8,8 +8,10 @@ import {
 } from "@/components/shared/court-location";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { SiteNav } from "@/components/shared/site-nav";
+import { MAX_DAYS_AHEAD } from "@/lib/booking-form-state";
 import {
   getAvailabilityForDays,
+  markUnbookableSlots,
   type AvailabilityRow,
 } from "@/lib/data/availability";
 
@@ -113,7 +115,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     toIsoDate(addDays(weekStart, index)),
   );
-  const availability = await getAvailabilityForDays(weekDates);
+  const rawAvailability = await getAvailabilityForDays(weekDates);
+  const availability = Object.fromEntries(
+    Object.entries(rawAvailability).map(([date, rows]) => [
+      date,
+      markUnbookableSlots(rows),
+    ]),
+  );
   const selectedRows = availability[selectedDate] ?? [];
   const days = weekDates.map((date) =>
     summarizeDay(date, availability[date] ?? [], today),
@@ -122,7 +130,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     weekStart > currentWeekStart
       ? toIsoDate(addDays(weekStart, -7))
       : null;
-  const nextWeek = toIsoDate(addDays(weekStart, 7));
+  // Stop paging once the next week starts beyond the booking window.
+  const lastBookableDate = toIsoDate(addDays(toDate(today), MAX_DAYS_AHEAD));
+  const followingWeek = toIsoDate(addDays(weekStart, 7));
+  const nextWeek = followingWeek <= lastBookableDate ? followingWeek : null;
   const courtCount = new Set(selectedRows.map((row) => row.court_id)).size;
 
   return (
