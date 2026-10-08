@@ -50,18 +50,15 @@ export default async function BookPage({ searchParams }: BookPageProps) {
   const profileId = await ensureCustomerProfile();
 
   if (!profileId) {
-    return (
-      <BookingShell currentStep={1}>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
-          <h1 className="font-display text-2xl font-bold">
-            Customer profile incomplete
-          </h1>
-          <p className="mt-2 text-sm leading-6">
-            This account is missing the full name or Philippine mobile number
-            needed for a booking. Sign out and create the customer account again.
-          </p>
-        </div>
-      </BookingShell>
+    // Social sign-ups arrive without a phone number, so send them to finish
+    // their profile and bring them back to the same slot afterwards.
+    const next = new URLSearchParams({ date: selectedDate });
+
+    if (initialCourtId !== null) next.set("court", String(initialCourtId));
+    if (initialStartsAt) next.set("startsAt", initialStartsAt);
+
+    redirect(
+      `/complete-profile?next=${encodeURIComponent(`/book?${next}`)}`,
     );
   }
 

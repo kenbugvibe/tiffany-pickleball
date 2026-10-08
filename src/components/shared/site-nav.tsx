@@ -32,6 +32,14 @@ export async function SiteNav() {
             <Link href="/my-bookings" className={linkClass}>
               My bookings
             </Link>
+          ) : !isAdmin ? (
+            <Link
+              href="/complete-profile"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center rounded-xl bg-gold-500 px-4 text-sm font-bold text-court-950 transition hover:bg-gold-200"
+            >
+              Complete profile
+            </Link>
           ) : null}
           {isAdmin ? (
             <Link

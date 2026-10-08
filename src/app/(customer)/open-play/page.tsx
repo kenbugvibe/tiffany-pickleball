@@ -38,20 +38,8 @@ export default async function OpenPlayPage({
   }
 
   if (!customerId) {
-    return (
-      <OpenPlayShell>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
-          <h1 className="font-display text-2xl font-bold">
-            Customer profile incomplete
-          </h1>
-          <p className="mt-2 text-sm leading-6">
-            This account is missing the full name or Philippine mobile number
-            needed to join open play. Sign out and create the customer account
-            again.
-          </p>
-        </div>
-      </OpenPlayShell>
-    );
+    const next = `/open-play?session=${encodeURIComponent(session.id)}`;
+    redirect(`/complete-profile?next=${encodeURIComponent(next)}`);
   }
 
   const existingSignup = await getActiveOpenPlaySignupForSession(session.id);

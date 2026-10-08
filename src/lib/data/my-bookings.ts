@@ -150,12 +150,7 @@ export async function getMyBookingsData() {
   }
 
   if (!customer) {
-    return {
-      ok: true as const,
-      profileMissing: true as const,
-      customerName: user.email ?? "Customer",
-      items: [] as MyBookingItem[],
-    };
+    redirect("/complete-profile?next=%2Fmy-bookings");
   }
 
   const [courtResult, openPlayResult, sundayUnliResult] = await Promise.all([
@@ -336,7 +331,6 @@ export async function getMyBookingsData() {
 
   return {
     ok: true as const,
-    profileMissing: false as const,
     customerName: customer.full_name,
     items: [...courtItems, ...openPlayItems, ...sundayUnliItems],
     evaluatedAt,

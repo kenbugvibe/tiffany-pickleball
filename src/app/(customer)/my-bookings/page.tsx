@@ -135,15 +135,6 @@ export default async function MyBookingsPage({
             </h1>
             <p className="mt-2 text-sm leading-6 text-red-800">{data.error}</p>
           </section>
-        ) : data.profileMissing ? (
-          <section className="rounded-2xl border border-red-200 bg-red-50 p-6">
-            <h1 className="font-display text-3xl font-bold text-red-900">
-              Customer profile incomplete
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-red-800">
-              This account does not have the customer profile required to view reservations. Sign out and create the customer account again with your full name and Philippine mobile number.
-            </p>
-          </section>
         ) : (
           <MyBookingsContent
             customerName={data.customerName}
