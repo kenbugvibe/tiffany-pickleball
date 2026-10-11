@@ -16,6 +16,11 @@ import {
   type FieldErrors,
 } from "@/lib/validation";
 
+// The owner signs in with the username "admin". Supabase only signs in by
+// email, so it stands for this address, which no mailbox exists for.
+const OWNER_USERNAME = "admin";
+const OWNER_LOGIN_EMAIL = "admin@tiffany-pickleball.vercel.app";
+
 function failure(
   fieldErrors: FieldErrors,
   formError: string | null = null,
@@ -91,6 +96,9 @@ export async function signUpAction(
 
   if (nameError) fieldErrors.fullName = nameError;
   if (emailError) fieldErrors.email = emailError;
+  if (email.trim().toLowerCase() === OWNER_LOGIN_EMAIL) {
+    fieldErrors.email = "Use your own email address.";
+  }
   if (phoneError) fieldErrors.phone = phoneError;
   if (passwordError) fieldErrors.password = passwordError;
 
@@ -158,8 +166,12 @@ export async function signInAction(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "");
+  const rawEmail = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  const email =
+    rawEmail.trim().toLowerCase() === OWNER_USERNAME
+      ? OWNER_LOGIN_EMAIL
+      : rawEmail.trim();
 
   const fieldErrors: FieldErrors = {};
   const emailError = validateEmail(email);
@@ -173,7 +185,7 @@ export async function signInAction(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: email.trim(),
+    email,
     password,
   });
 
