@@ -102,7 +102,7 @@ export async function signUpAction(
   const origin = await getOrigin();
   const target = safeRedirectPath(formData.get("next"));
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
     options: {
@@ -118,7 +118,32 @@ export async function signUpAction(
   });
 
   if (error) {
+    if (error.code === "user_already_exists") {
+      return failure({
+        email: "An account with this email already exists. Sign in instead.",
+      });
+    }
+
+    if (/sending confirmation email/i.test(error.message)) {
+      return failure(
+        {},
+        "We could not create your account right now. Please try again later or sign up with Google or Facebook.",
+      );
+    }
+
     return failure({}, error.message);
+  }
+
+  // With email confirmation turned off in Supabase, signUp signs the customer
+  // in immediately, so the profile is created and they go straight on.
+  if (data.session) {
+    const customerId = await ensureCustomerProfile();
+
+    if (!customerId) {
+      redirect(`/complete-profile?next=${encodeURIComponent(target)}`);
+    }
+
+    redirect(target);
   }
 
   return {
